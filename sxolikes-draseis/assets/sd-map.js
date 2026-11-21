@@ -37,11 +37,34 @@
 
 	function isUrl(s) { return /^https?:\/\/\S+$/i.test(s); }
 
+	/* Σύμβολο ανά κατηγορία: απλά λευκά σχήματα SVG (ίδια σε όλους τους υπολογιστές). */
+	var SYMBOLS = {
+		machi: '<path d="M4 4l10 10M20 4L10 14" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M6.5 13.5l4 4M17.5 13.5l-4 4M4.5 19.5l2-2M19.5 19.5l-2-2" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>',
+		kastro: '<path d="M4 21V8h2.5v2.5H9V8h2.5v2.5h1V8H15v2.5h2.5V8H20v13h-5.5v-4a2.5 2.5 0 0 0-5 0v4z" fill="#fff"/>',
+		archaia: '<path d="M9 3h6v1.5l-1.2 1.2C17 7 18.5 9.8 18.5 13c0 3.8-2.8 6.8-6.5 8-3.7-1.2-6.5-4.2-6.5-8 0-3.2 1.5-6 4.7-7.3L9 4.5z" fill="#fff"/><path d="M8 7.5C5 7.5 4.5 11 6 12.5M16 7.5c3 0 3.5 3.5 2 5" stroke="#fff" stroke-width="1.6" fill="none"/>',
+		mythos: '<path d="M13.5 2L5 13.5h6L10 22l9-12h-6.2z" fill="#fff"/>',
+		mnimi: '<path d="M10 4.5L12 2l2 2.5 1 12.5H9zM6 18h12v3.5H6z" fill="#fff"/>',
+		fysi: '<path d="M1.5 20.5l7.5-12 4.2 6.3 2.8-3.8 6.5 9.5z" fill="#fff"/><circle cx="17.5" cy="5.5" r="2.3" fill="#fff"/>',
+		mouseio: '<path d="M12 2.5l9.5 5H2.5zM4.5 9.5h2.5v8H4.5zm4.3 0h2.5v8H8.8zm4.4 0h2.5v8h-2.5zm4.3 0H20v8h-2.5zM2.5 18.5h19v2.5h-19z" fill="#fff"/>'
+	};
+
+	function symbol(cat, size) {
+		var s = SYMBOLS[cat];
+		return s ? '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" aria-hidden="true" focusable="false">' + s + '</svg>' : '';
+	}
+
+	/* Μικρό χρωματιστό σήμα με το σύμβολο, για λίστα, φίλτρα και δελτία. */
+	function badge(cat) {
+		var b = el('span', { class: 'sd-sym', style: 'background:' + (COLORS[cat] || '#444') });
+		b.innerHTML = symbol(cat, 13); // σταθερά σχήματα του κώδικα, όχι δεδομένα χρήστη
+		return b;
+	}
+
 	function icon(p, num) {
 		var c = COLORS[p.cat] || '#444';
 		var cls = 'sd-pin' + (p.approx ? ' sd-pin-approx' : '') + (p.byClass ? ' sd-pin-class' : '');
-		var html = '<span class="' + cls + '" style="--c:' + c + '">' + (num ? '<b>' + num + '</b>' : '') + '</span>';
-		return L.divIcon({ className: 'sd-pin-wrap', html: html, iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -12] });
+		var html = '<span class="' + cls + '" style="--c:' + c + '">' + (num ? '<b>' + num + '</b>' : symbol(p.cat, 16)) + '</span>';
+		return L.divIcon({ className: 'sd-pin-wrap', html: html, iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -14] });
 	}
 
 	function popup(p, data) {
@@ -49,7 +72,7 @@
 		box.appendChild(el('h3', { text: p.name }));
 		var cat = data.cats[p.cat] ? data.cats[p.cat].label : '';
 		box.appendChild(el('p', { class: 'sd-pop-meta' }, [
-			el('span', { class: 'sd-dot', style: 'background:' + (COLORS[p.cat] || '#444') }),
+			badge(p.cat),
 			cat + (p.period ? ' · ' + p.period : '')
 		]));
 		if (p.photo) {
@@ -130,7 +153,7 @@
 		all.addEventListener('click', function () { self.filter.cat = ''; self.markChips(chips, all); self.refresh(true); });
 		chips.appendChild(all);
 		Object.keys(data.cats).forEach(function (k) {
-			var b = el('button', { type: 'button', class: 'sd-chip' }, [el('span', { class: 'sd-dot', style: 'background:' + (COLORS[k] || '#444') }), data.cats[k].label]);
+			var b = el('button', { type: 'button', class: 'sd-chip' }, [badge(k), data.cats[k].label]);
 			b.addEventListener('click', function () { self.filter.cat = k; self.markChips(chips, b); self.refresh(true); });
 			chips.appendChild(b);
 		});
@@ -247,7 +270,7 @@
 				shown.push(it.m.getLatLng());
 				var li = el('li');
 				var btn = el('button', { type: 'button', 'data-id': it.p.id }, [
-					el('span', { class: 'sd-dot', style: 'background:' + (COLORS[it.p.cat] || '#444') }),
+					badge(it.p.cat),
 					el('span', { class: 'sd-li-name', text: it.p.name }),
 					el('span', { class: 'sd-li-meta', text: (it.p.period || '') + (data.school ? ' · ' + fmtKm(km(data.school, it.p)) + ' χλμ.' : '') + (it.p.byClass ? ' · τμήμα ' + it.p.byClass : '') })
 				]);
