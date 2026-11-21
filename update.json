@@ -1,0 +1,9 @@
+{
+  "version": "0.4.1",
+  "download": "https://github.com/stam1966/sxolikes-draseis/archive/d5beb38fc2007a4671c95790a3d6d7eb3ad298b6.zip",
+  "requires": "6.2",
+  "requires_php": "7.4",
+  "tested": "7.1",
+  "date": "2026-11-21",
+  "changelog": "## 0.4.1\n- Αυτόματες ενημερώσεις από το GitHub· «Έλεγχος τώρα» στις Ρυθμίσεις.\n- Η εισαγωγή ΣΔ δεν περιέχει ονόματα."
+}
