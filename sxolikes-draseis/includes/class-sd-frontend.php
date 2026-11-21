@@ -17,18 +17,18 @@ class SD_Frontend {
 	/** Οθόνες: κλειδί => [τίτλος, δικαίωμα]. */
 	private static function screens() {
 		return array(
-			'arxiki' => array( 'Αρχική', SD_Roles::CAP_ACCESS ),
-			'sxedia' => array( 'Σχέδια Δράσης', SD_Roles::CAP_ACCESS ),
-			'ergastiria' => array( 'Εργαστήρια (1Α)', SD_Roles::CAP_ACCESS ),
-			'politis'    => array( 'Ενεργός Πολίτης (2)', SD_Roles::CAP_ACCESS ),
-			'aitimata'   => array( 'Επισκέψεις (3)', SD_Roles::CAP_ACCESS ),
-			'apotimisi'  => array( 'Αποτίμηση (4)', SD_Roles::CAP_ACCESS ),
-			'xartis'     => array( 'Χάρτης τόπου', SD_Roles::CAP_ACCESS ),
-			'taxeis' => array( 'Τμήματα', SD_Roles::CAP_MANAGE ),
-			'xristes' => array( 'Χρήστες', SD_Roles::CAP_MANAGE ),
-			'etos'   => array( 'Σχολικό έτος', SD_Roles::CAP_MANAGE ),
-			'exagoges'   => array( 'Εξαγωγές', SD_Roles::CAP_REVIEW ),
-			'rythmiseis' => array( 'Ρυθμίσεις', SD_Roles::CAP_MANAGE ),
+			'arxiki'     => array( 'Αρχική', SD_Roles::CAP_ACCESS, '' ),
+			'sxedia'     => array( 'Σχέδια Δράσης', SD_Roles::CAP_ACCESS, '' ),
+			'ergastiria' => array( 'Εργαστήρια', SD_Roles::CAP_ACCESS, '1Α' ),
+			'politis'    => array( 'Ενεργός Πολίτης', SD_Roles::CAP_ACCESS, '2' ),
+			'aitimata'   => array( 'Επισκέψεις', SD_Roles::CAP_ACCESS, '3' ),
+			'apotimisi'  => array( 'Αποτίμηση', SD_Roles::CAP_ACCESS, '4' ),
+			'xartis'     => array( 'Χάρτης τόπου', SD_Roles::CAP_ACCESS, '' ),
+			'exagoges'   => array( 'Εξαγωγές', SD_Roles::CAP_REVIEW, '' ),
+			'taxeis'     => array( 'Τμήματα', SD_Roles::CAP_MANAGE, 'admin' ),
+			'xristes'    => array( 'Χρήστες', SD_Roles::CAP_MANAGE, 'admin' ),
+			'etos'       => array( 'Σχολικό έτος', SD_Roles::CAP_MANAGE, 'admin' ),
+			'rythmiseis' => array( 'Ρυθμίσεις', SD_Roles::CAP_MANAGE, 'admin' ),
 		);
 	}
 
@@ -263,17 +263,33 @@ class SD_Frontend {
 	private static function nav( $current ) {
 		$user = wp_get_current_user();
 		$year = SD_Data::active_year();
-		echo '<nav class="sd-nav"><ul>';
+		$main  = '';
+		$admin = '';
+		$in_admin = false;
 		foreach ( self::screens() as $key => $def ) {
 			if ( ! current_user_can( $def[1] ) ) {
 				continue;
 			}
-			printf(
-				'<li><a href="%s"%s>%s</a></li>',
+			$tag  = ( '' !== $def[2] && 'admin' !== $def[2] ) ? ' <span class="sd-nav-no">' . esc_html( $def[2] ) . '</span>' : '';
+			$item = sprintf(
+				'<li><a href="%s"%s>%s%s</a></li>',
 				esc_url( self::url( $key ) ),
 				$key === $current ? ' aria-current="page"' : '',
-				esc_html( $def[0] )
+				esc_html( $def[0] ),
+				$tag
 			);
+			if ( 'admin' === $def[2] ) {
+				$admin   .= $item;
+				$in_admin = $in_admin || $key === $current;
+			} else {
+				$main .= $item;
+			}
+		}
+		$title = self::screens()[ $current ][0] ?? 'Μενού';
+		echo '<nav class="sd-nav" aria-label="Μενού εφαρμογής"><details class="sd-nav-toggle"><summary><span class="sd-burger" aria-hidden="true"></span> Μενού · <strong>' . esc_html( $title ) . '</strong></summary></details>';
+		echo '<ul class="sd-nav-main">' . $main; // phpcs:ignore WordPress.Security.EscapeOutput
+		if ( $admin ) {
+			echo '<li class="sd-nav-admin"><details' . ( $in_admin ? ' open' : '' ) . '><summary' . ( $in_admin ? ' aria-current="true"' : '' ) . '>Διαχείριση</summary><ul>' . $admin . '</ul></details></li>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		}
 		echo '</ul><div class="sd-who">';
 		echo esc_html( $user->display_name );
@@ -316,88 +332,101 @@ class SD_Frontend {
 		echo '<h2>Καλώς ήρθατε, ' . esc_html( $user->first_name ? $user->first_name : $user->display_name ) . '</h2>';
 
 		if ( ! $year ) {
-			echo '<p class="sd-notice sd-error">Δεν έχει οριστεί τρέχον σχολικό έτος.</p>';
+			echo '<p class="sd-notice sd-error">Δεν έχει οριστεί τρέχον σχολικό έτος.' . ( current_user_can( SD_Roles::CAP_MANAGE ) ? ' <a href="' . esc_url( self::url( 'etos' ) ) . '">Ορισμός σχολικού έτους</a>' : '' ) . '</p>';
 			return;
 		}
 
-		$mine = SD_Workshops::dashboard_rows( $year, false );
-		echo '<section class="sd-card"><h3>Τα τμήματά μου · Έντυπο 1Α</h3>';
-		if ( $mine ) {
-			echo '<p class="sd-meta">Προθεσμία υποβολής 1Α: ' . esc_html( mysql2date( 'd/m/Y', SD_Workshops::deadline() ) ) . '</p><ul class="sd-list">';
-			foreach ( $mine as $row ) {
-				echo '<li><a href="' . esc_url( self::url( 'ergastiria', array( 'class' => $row[0]->id ) ) ) . '">Τμήμα ' . esc_html( SD_Data::class_label( $row[0] ) ) . '</a> ' . SD_Workshops::badge( $row[1] ) . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		// Ενότητες: τα τμήματά μου, τα σχέδια που συντονίζω, το σχολείο.
+		$groups = array();
+		foreach ( SD_Data::classes_of_user( $user->ID, $year->id ) as $c ) {
+			$groups[] = array(
+				'title' => 'Τμήμα ' . SD_Data::class_label( $c ),
+				'steps' => SD_Timeline::class_steps( $c ),
+			);
+		}
+		$plans  = SD_Plans::plans( $year->id );
+		$member = array();
+		foreach ( $plans as $p ) {
+			if ( (int) $p->coordinator_id === (int) $user->ID ) {
+				$groups[] = array(
+					'title' => trim( $p->code . ' «' . $p->title . '»' ),
+					'note'  => 'Συντονίζετε αυτό το Σχέδιο Δράσης.',
+					'steps' => SD_Timeline::plan_steps( $p ),
+				);
+			} elseif ( in_array( (int) $user->ID, SD_Plans::members( $p->id ), true ) ) {
+				$member[] = $p;
+			}
+		}
+		$manage = current_user_can( SD_Roles::CAP_MANAGE );
+		$school = current_user_can( SD_Roles::CAP_REVIEW ) ? SD_Timeline::school_steps( $year ) : array();
+
+		// «Τι να κάνω τώρα».
+		$urgent = SD_Timeline::urgent( $groups );
+		$review = array();
+		foreach ( $school as $s ) {
+			if ( 'review' === $s['state'] ) {
+				$review[] = $s;
+			}
+		}
+		echo '<section class="sd-card sd-now"><h3>Τι εκκρεμεί τώρα</h3>';
+		if ( ! $urgent && ! $review ) {
+			echo '<p class="sd-allgood">Όλα είναι εντάξει. Δεν υπάρχει κάτι που να περιμένει εσάς.</p>';
+		} else {
+			echo '<ul class="sd-now-list">';
+			foreach ( array_slice( $urgent, 0, 6 ) as $s ) {
+				list( $label, $cls ) = SD_Timeline::STATES[ $s['state'] ];
+				echo '<li><span class="sd-pill sd-pill-' . esc_attr( $cls ) . '">' . esc_html( $label ) . '</span> <span class="sd-now-txt"><strong>' . esc_html( $s['group'] ) . '</strong> · ' . esc_html( $s['title'] ) . ( $s['deadline'] ? ' <span class="sd-meta">(έως ' . esc_html( mysql2date( 'd/m', $s['deadline'] ) ) . ')</span>' : '' ) . '</span> <a class="sd-button sd-small" href="' . esc_url( $s['url'] ) . '">' . esc_html( $s['cta'] ) . '</a></li>';
+			}
+			foreach ( $review as $s ) {
+				echo '<li><span class="sd-pill sd-pill-review">Για έλεγχο</span> <span class="sd-now-txt"><strong>' . esc_html( $s['title'] ) . '</strong> · ' . esc_html( $s['detail'] ) . '</span> <a class="sd-button sd-small" href="' . esc_url( $s['url'] ) . '">' . esc_html( $s['cta'] ) . '</a></li>';
 			}
 			echo '</ul>';
-		} else {
-			echo '<p>Δεν σας έχει αντιστοιχιστεί ακόμη τμήμα. Η Διεύθυνση ορίζει τα τμήματα και τους υπεύθυνους.</p>';
+			if ( count( $urgent ) > 6 ) {
+				echo '<p class="sd-meta">και ακόμη ' . (int) ( count( $urgent ) - 6 ) . ' παρακάτω.</p>';
+			}
 		}
 		echo '</section>';
 
-		if ( current_user_can( SD_Roles::CAP_MANAGE ) ) {
-			$classes   = SD_Data::classes( $year->id );
-			$no_lead   = 0;
-			foreach ( $classes as $c ) {
-				$has = false;
-				foreach ( SD_Data::class_teachers( $c->id ) as $t ) {
-					if ( 'ergastiria' === $t->class_role ) {
-						$has = true;
-					}
-				}
-				if ( ! $has ) {
-					$no_lead++;
-				}
-			}
-			$counts = array();
-			foreach ( SD_Workshops::dashboard_rows( $year, true ) as $row ) {
-				$s            = $row[1] ? $row[1]->status : 'none';
-				$counts[ $s ] = ( $counts[ $s ] ?? 0 ) + 1;
-			}
-			echo '<section class="sd-card"><h3>Για τη Διεύθυνση</h3><ul>';
-			echo '<li>Τμήματα στο ' . esc_html( $year->label ) . ': <strong>' . count( $classes ) . '</strong></li>';
-			echo '<li>Έντυπα 1Α: υποβλήθηκαν <strong>' . (int) ( ( $counts['ypovlithike'] ?? 0 ) + ( $counts['elegxthike'] ?? 0 ) ) . '</strong>, ελέγχθηκαν <strong>' . (int) ( $counts['elegxthike'] ?? 0 ) . '</strong>, σε εξέλιξη ή επιστροφή <strong>' . (int) ( ( $counts['proxeiro'] ?? 0 ) + ( $counts['epistrafike'] ?? 0 ) + ( $counts['none'] ?? 0 ) ) . '</strong> · <a href="' . esc_url( self::url( 'ergastiria' ) ) . '">Όλα τα έντυπα</a></li>';
-			if ( $classes ) {
-				echo '<li>Τμήματα χωρίς υπεύθυνο Εργαστηρίων: <strong>' . (int) $no_lead . '</strong></li>';
-			}
-			$pending_req = SD_Requests::pending_count( $year->id );
-			if ( $pending_req ) {
-				echo '<li>Αιτήματα επίσκεψης/φορέα (Έντυπο 3) που περιμένουν απόφαση Συλλόγου: <strong>' . (int) $pending_req . '</strong> · <a href="' . esc_url( self::url( 'aitimata' ) ) . '">Επισκέψεις</a></li>';
-			}
-			$pending_places = SD_Map::pending_count( $year->id );
-			if ( $pending_places ) {
-				echo '<li>Σημεία χάρτη για έγκριση: <strong>' . (int) $pending_places . '</strong> · <a href="' . esc_url( self::url( 'xartis' ) ) . '">Χάρτης</a></li>';
-			}
-			echo '</ul><p><a class="sd-button" href="' . esc_url( self::url( 'taxeis' ) ) . '">Διαχείριση τμημάτων</a></p></section>';
+		if ( ! $groups && ! $school ) {
+			echo '<section class="sd-card"><p>Δεν σας έχει αντιστοιχιστεί ακόμη τμήμα ή Σχέδιο Δράσης. Η Διεύθυνση ορίζει τα τμήματα και τους υπεύθυνους.</p></section>';
 		}
 
-		$plans = SD_Plans::plans( $year->id );
+		// Γραμμές χρόνου.
+		echo '<div class="sd-tl-grid">';
+		foreach ( $groups as $g ) {
+			echo '<section class="sd-card sd-tl-card"><div class="sd-tl-top"><h3>' . esc_html( $g['title'] ) . '</h3>' . SD_Timeline::progress_html( $g['steps'] ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			if ( ! empty( $g['note'] ) ) {
+				echo '<p class="sd-meta">' . esc_html( $g['note'] ) . '</p>';
+			}
+			SD_Timeline::render_steps( $g['steps'] );
+			echo '</section>';
+		}
+		if ( $school ) {
+			echo '<section class="sd-card sd-tl-card sd-tl-school"><div class="sd-tl-top"><h3>Όλο το σχολείο · ' . esc_html( $year->label ) . '</h3>' . SD_Timeline::progress_html( $school ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			SD_Timeline::render_steps( $school );
+			if ( $manage ) {
+				$pending_places = SD_Map::pending_count( $year->id );
+				if ( $pending_places ) {
+					echo '<p class="sd-meta">Σημεία χάρτη για έγκριση: <strong>' . (int) $pending_places . '</strong> · <a href="' . esc_url( self::url( 'xartis' ) ) . '">Χάρτης τόπου</a></p>';
+				}
+			}
+			echo '</section>';
+		}
+		echo '</div>';
+
+		// Τα Σχέδια Δράσης του σχολείου, σε σύντομη λίστα.
 		echo '<section class="sd-card"><h3>Σχέδια Δράσης του σχολείου</h3>';
 		if ( $plans ) {
-			echo '<ul>';
+			echo '<ul class="sd-list">';
 			foreach ( $plans as $p ) {
-				$mine = (int) $p->coordinator_id === (int) $user->ID ? ' <span class="sd-badge sd-badge-ok">Συντονίζετε</span>' : ( in_array( (int) $user->ID, SD_Plans::members( $p->id ), true ) ? ' <span class="sd-badge">Μέλος</span>' : '' );
-				echo '<li><a href="' . esc_url( self::url( 'sxedia', array( 'id' => $p->id ) ) ) . '">' . esc_html( trim( $p->code . ' ' . $p->title ) ) . '</a>' . $mine . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput
+				$tag = (int) $p->coordinator_id === (int) $user->ID ? ' <span class="sd-badge sd-badge-ok">Συντονίζετε</span>' : ( in_array( $p, $member, true ) ? ' <span class="sd-badge">Μέλος</span>' : '' );
+				echo '<li><a href="' . esc_url( self::url( 'sxedia', array( 'id' => $p->id ) ) ) . '">' . esc_html( trim( $p->code . ' ' . $p->title ) ) . '</a>' . $tag . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput
 			}
 			echo '</ul>';
 		} else {
 			echo '<p>Δεν έχουν καταχωριστεί ακόμη Σχέδια Δράσης.</p>';
 		}
 		echo '</section>';
-
-		$deps = SD_Citizen::dashboard_rows( $year );
-		if ( $deps ) {
-			echo '<section class="sd-card"><h3>Δράσεις Ενεργού Πολίτη των τμημάτων μου</h3><ul class="sd-list">';
-			foreach ( $deps as $row ) {
-				echo '<li><strong>' . esc_html( SD_Data::class_label( $row[0] ) ) . '</strong>: ';
-				if ( ! $row[1] ) {
-					echo '<a href="' . esc_url( self::url( 'politis' ) ) . '">καμία ακόμη, ξεκινήστε μία</a>';
-				}
-				foreach ( $row[1] as $d ) {
-					echo '<a href="' . esc_url( self::url( 'politis', array( 'id' => $d->id ) ) ) . '">' . esc_html( $d->title ) . '</a> ' . SD_Citizen::status_badge( $d->status ) . ' '; // phpcs:ignore WordPress.Security.EscapeOutput
-				}
-				echo '</li>';
-			}
-			echo '</ul></section>';
-		}
 	}
 
 	/* ---------- Τμήματα ---------- */

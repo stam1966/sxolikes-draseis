@@ -98,3 +98,55 @@
 		sync();
 	} );
 }() );
+
+/* Προειδοποίηση για μη αποθηκευμένες αλλαγές σε φόρμες της εφαρμογής. */
+( function () {
+	'use strict';
+	var dirty = null;
+	document.querySelectorAll( 'form.sd-form' ).forEach( function ( form ) {
+		// Μόνο φόρμες με πεδία κειμένου (όχι φόρμες-κουμπιά ενεργειών).
+		if ( ! form.querySelector( 'textarea, input[type="text"], input:not([type]), input[type="date"], input[type="number"]' ) ) {
+			return;
+		}
+		var submit = form.querySelector( 'button[type="submit"], button:not([type])' );
+		// Φόρμες ελέγχου (κουμπιά με απόφαση): χωρίς κουμπί γρήγορης αποθήκευσης,
+		// για να μη σταλεί κατά λάθος απόφαση· μένει μόνο η προειδοποίηση.
+		if ( submit && submit.name ) {
+			submit = null;
+		}
+		function mark( e ) {
+			if ( e && e.target && e.target.closest && e.target.closest( '.sd-copy' ) ) {
+				return; // τα κουτιά των prompts δεν είναι στοιχεία της φόρμας
+			}
+			if ( dirty === form ) {
+				return;
+			}
+			dirty = form;
+			if ( submit && ! form.querySelector( '.sd-dirty-bar' ) ) {
+				var bar = document.createElement( 'div' );
+				bar.className = 'sd-dirty-bar';
+				bar.setAttribute( 'role', 'status' );
+				var txt = document.createElement( 'span' );
+				txt.textContent = 'Έχετε αλλαγές που δεν αποθηκεύτηκαν.';
+				var btn = document.createElement( 'button' );
+				btn.type = 'submit';
+				btn.className = 'sd-button sd-small';
+				btn.textContent = 'Αποθήκευση';
+				bar.appendChild( txt );
+				bar.appendChild( btn );
+				form.appendChild( bar );
+			}
+		}
+		form.addEventListener( 'input', mark );
+		form.addEventListener( 'change', mark );
+		form.addEventListener( 'submit', function () {
+			dirty = null;
+		} );
+	} );
+	window.addEventListener( 'beforeunload', function ( e ) {
+		if ( dirty ) {
+			e.preventDefault();
+			e.returnValue = '';
+		}
+	} );
+}() );
