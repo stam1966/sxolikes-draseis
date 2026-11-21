@@ -1,0 +1,52 @@
+/* Σχολικές Δράσεις — σελίδες του WordPress για σύνδεση και κωδικό (wp-login.php) */
+body.login {
+	background: linear-gradient(160deg, #2f6f73 0%, #1f5256 45%, #f4f5f1 45.1%, #f4f5f1 100%) fixed;
+	font-family: Roboto, system-ui, -apple-system, "Segoe UI", "Noto Sans", Arial, sans-serif;
+	color: #24302f;
+}
+.login h1 a {
+	width: 84px;
+	height: 84px;
+	border-radius: 50%;
+	background-color: #fff;
+	background-size: 70px 70px;
+	background-position: center;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, .2);
+	margin-bottom: 1rem;
+}
+.login h1 a.sd-no-logo { background-image: none !important; }
+.login form {
+	border: 1px solid #dfe3df;
+	border-radius: 18px;
+	box-shadow: 0 10px 40px rgba(16, 45, 47, .14);
+	padding: 1.6rem 1.5rem;
+}
+.login label { font-weight: 600; color: #24302f; }
+.login input[type="text"], .login input[type="password"], .login input[type="email"] {
+	border-radius: 8px;
+	border-color: #cfd6d2;
+	padding: .45rem .7rem;
+	font-size: 1rem;
+}
+.login input[type="text"]:focus, .login input[type="password"]:focus, .login input[type="email"]:focus {
+	border-color: #2f6f73;
+	box-shadow: 0 0 0 3px rgba(47, 111, 115, .2);
+}
+.wp-core-ui .button-primary {
+	background: #2f6f73;
+	border-color: #2f6f73;
+	border-radius: 999px;
+	padding: 0 1.2rem;
+	font-weight: 600;
+}
+.wp-core-ui .button-primary:hover, .wp-core-ui .button-primary:focus { background: #1f5256; border-color: #1f5256; }
+.wp-core-ui .button-secondary, .login .button.wp-hide-pw { color: #2f6f73; }
+.login #nav a, .login #backtoblog a { color: #2f6f73; }
+.login #nav a:hover, .login #backtoblog a:hover { color: #1f5256; }
+.login .message, .login .notice, .login .success { border-left-color: #2f6f73; border-radius: 10px; }
+.login #login_error, .login .notice-error { border-left-color: #b3261e; }
+input[type="checkbox"]:checked::before { content: none; }
+input[type="checkbox"] { accent-color: #2f6f73; }
+.sd-login-title { text-align: center; color: #fff; margin: -0.4rem 0 1.2rem; font-size: 1.05rem; font-weight: 600; text-shadow: 0 1px 2px rgba(0, 0, 0, .25); }
+.sd-login-title small { display: block; font-weight: 400; opacity: .85; font-size: .85rem; }
+.language-switcher { display: none; }

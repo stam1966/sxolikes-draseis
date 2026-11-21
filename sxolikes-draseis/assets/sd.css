@@ -274,3 +274,136 @@ fieldset.sd-card legend { font-weight: 600; padding: 0 .3rem; }
 
 .sd-ai-check { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .6rem 0 0; padding-top: .5rem; border-top: 1px dashed #d7c9f3; }
 .sd-ai-check-label { font-size: .85rem; font-weight: 600; color: #5b3ca8; }
+
+/* ===== 0.10.0: εμφάνιση στα χρώματα της ιστοσελίδας του σχολείου (πετρόλ-πράσινο) ===== */
+body.sd-body {
+	background: #f4f5f1;
+	color: #2e2e2e;
+	font-family: Roboto, system-ui, -apple-system, "Segoe UI", "Noto Sans", Arial, sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+.sd-app {
+	--sd-ink: #24302f;
+	--sd-muted: #5b6766;
+	--sd-line: #dfe3df;
+	--sd-bg: #f4f5f1;
+	--sd-accent: #2f6f73;
+	--sd-accent-dark: #1f5256;
+	--sd-accent-soft: #e6f0ef;
+	--sd-ok: #3f7d3c;
+	--sd-ok-soft: #eaf4e8;
+	--sd-err: #b3261e;
+	--sd-warn: #8a4b00;
+	--sd-warn-bg: #fff4e5;
+	--sd-info-bg: #e6f0ef;
+	--sd-radius: 12px;
+	--sd-shadow: 0 1px 2px rgba(16, 45, 47, .06), 0 4px 14px rgba(16, 45, 47, .06);
+}
+
+/* Κεφαλίδα */
+.sd-header { background: linear-gradient(135deg, #2f6f73 0%, #1f5256 60%, #163f42 100%); box-shadow: 0 2px 10px rgba(16, 45, 47, .18); }
+.sd-header-inner { align-items: center; padding: .75rem 16px; }
+.sd-brand { display: flex; align-items: center; gap: .7rem; text-decoration: none; color: #fff; min-width: 0; }
+.sd-brand:hover, .sd-brand:focus { color: #fff; }
+.sd-logo { width: 44px; height: 44px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; box-shadow: 0 1px 4px rgba(0,0,0,.2); overflow: hidden; }
+.sd-logo img { width: 38px; height: 38px; object-fit: contain; }
+.sd-logo-mono { font-weight: 800; color: #2f6f73; font-size: 1.05rem; letter-spacing: -.02em; }
+.sd-brand-txt { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.sd-site { font-size: 1.2rem; font-weight: 700; letter-spacing: .01em; }
+.sd-school { font-size: .85rem; opacity: .85; }
+@media (max-width: 520px) { .sd-school { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70vw; } .sd-site { font-size: 1.05rem; } }
+
+/* Τίτλοι */
+.sd-app h2 { font-size: 1.55rem; font-weight: 700; color: var(--sd-accent-dark); letter-spacing: -.01em; margin: 1.1rem 0 .8rem; }
+.sd-app h3 { font-size: 1.08rem; font-weight: 700; color: var(--sd-ink); }
+.sd-app a { color: var(--sd-accent); text-underline-offset: 2px; }
+.sd-app a:hover { color: var(--sd-accent-dark); }
+
+/* Κάρτες */
+.sd-card { border: 1px solid var(--sd-line); border-radius: var(--sd-radius); padding: 1.1rem 1.2rem; background: #fff; box-shadow: var(--sd-shadow); }
+.sd-sub { border-radius: 10px; border-color: var(--sd-line); background: #fbfcfa; }
+.sd-subtheme, .sd-criterion { background: var(--sd-accent-soft); }
+
+/* Μενού */
+.sd-nav { background: #fff; border: 1px solid var(--sd-line); border-radius: var(--sd-radius); box-shadow: var(--sd-shadow); padding: .45rem .6rem; }
+.sd-nav-main > li > a, .sd-nav-admin summary { border-radius: 999px; padding: .42rem .9rem; font-weight: 500; }
+.sd-nav-main > li > a:hover, .sd-nav-admin summary:hover { background: var(--sd-accent-soft); color: var(--sd-accent-dark); }
+.sd-app .sd-nav-main a[aria-current="page"], .sd-app .sd-nav-admin a[aria-current="page"] { background: var(--sd-accent); color: #fff; box-shadow: 0 2px 6px rgba(47, 111, 115, .3); }
+.sd-nav-admin details[open] ul { border-radius: 12px; }
+.sd-who { color: var(--sd-muted); }
+
+/* Κουμπιά */
+.sd-button { background: var(--sd-accent); border-radius: 999px; padding: .55rem 1.1rem; font-weight: 600; letter-spacing: .01em; box-shadow: 0 1px 2px rgba(16,45,47,.15); transition: background .15s, box-shadow .15s; }
+.sd-button:hover, .sd-button:focus { background: var(--sd-accent-dark); filter: none; box-shadow: 0 3px 10px rgba(47,111,115,.3); }
+.sd-small { padding: .32rem .8rem; font-size: .85rem; }
+.sd-quiet { background: #fff; color: var(--sd-accent); border: 1px solid #b9d3d1; box-shadow: none; }
+.sd-quiet:hover, .sd-quiet:focus { background: var(--sd-accent-soft); color: var(--sd-accent-dark); box-shadow: none; }
+.sd-danger { background: var(--sd-err); }
+.sd-danger:hover, .sd-danger:focus { background: #8c1d17; }
+
+/* Πεδία */
+.sd-app textarea, .sd-app input[type="text"], .sd-app input:not([type]), .sd-app input[type="date"], .sd-app input[type="number"], .sd-app input[type="email"], .sd-app input[type="password"], .sd-app select {
+	border-radius: 8px; border-color: #cfd6d2; padding: .5rem .6rem; transition: border-color .15s, box-shadow .15s;
+}
+.sd-app textarea:focus, .sd-app input:focus, .sd-app select:focus { border-color: var(--sd-accent); box-shadow: 0 0 0 3px rgba(47,111,115,.18); }
+.sd-app :focus-visible { outline: 3px solid rgba(47,111,115,.45); }
+.sd-app input[type="checkbox"], .sd-app input[type="radio"] { accent-color: var(--sd-accent); }
+.sd-block { font-weight: 500; color: var(--sd-ink); }
+.sd-help, .sd-meta { color: var(--sd-muted); }
+
+/* Πίνακες */
+.sd-table { border-collapse: separate; border-spacing: 0; background: #fff; border: 1px solid var(--sd-line); border-radius: var(--sd-radius); overflow: hidden; }
+.sd-table th { background: var(--sd-accent-soft); color: var(--sd-accent-dark); font-weight: 600; }
+.sd-table tbody tr:hover td { background: #fafbf8; }
+@media (max-width: 700px) { .sd-table { border: 0; background: transparent; } .sd-table tr { background: #fff; } }
+
+/* Μηνύματα και ετικέτες */
+.sd-notice { border-radius: 10px; }
+.sd-ok { background: var(--sd-ok-soft); border-color: var(--sd-ok); }
+.sd-badge-ok { background: var(--sd-ok-soft); border-color: #bcd9b8; color: var(--sd-ok); }
+.sd-badge-info, .sd-kind-ylopoiisi { background: var(--sd-accent-soft); border-color: #b9d3d1; color: var(--sd-accent-dark); }
+.sd-pill-todo { background: var(--sd-accent-soft); color: var(--sd-accent-dark); }
+
+/* Αρχική: «Τι εκκρεμεί» και γραμμή χρόνου */
+.sd-now { border-left: 5px solid var(--sd-accent); }
+.sd-progress span { background: linear-gradient(90deg, #6ba368, #3f7d3c); }
+.sd-tl-done .sd-tl-dot { background: var(--sd-ok); border-color: var(--sd-ok); }
+.sd-tl-done::before { background: #9cc79a; }
+.sd-tl-done .sd-tl-state { color: var(--sd-ok); }
+.sd-tl-todo .sd-tl-dot { border-color: var(--sd-accent); }
+.sd-tl-todo .sd-tl-state { color: var(--sd-accent); }
+
+/* Κουμπί AI: πετρόλ αντί για μωβ */
+.sd-ai-btn { color: var(--sd-accent-dark); background: var(--sd-accent-soft); border-color: #b9d3d1; }
+.sd-ai-btn:hover, .sd-ai-btn:focus { background: #d6e7e5; }
+.sd-ai-panel { border-color: #b9d3d1; border-left-color: var(--sd-accent); background: #f6faf9; }
+.sd-ai-title, .sd-ai-wait, .sd-ai-check-label { color: var(--sd-accent-dark); }
+.sd-ai-wait::before { border-color: #b9d3d1; border-top-color: var(--sd-accent); }
+.sd-ai-check { border-top-color: #b9d3d1; }
+.sd-ai { border-color: #b9d3d1; background: #f6faf9; }
+
+/* Μπάρα μη αποθηκευμένων */
+.sd-dirty-bar { border-radius: 12px; }
+
+/* ===== Σύνδεση ===== */
+.sd-login-wrap { min-height: calc(100vh - 160px); display: flex; align-items: center; justify-content: center; padding: 1.5rem 0; }
+.sd-app.sd-login { max-width: 420px; width: 100%; margin: 0 auto; }
+.sd-login-card { background: #fff; border: 1px solid var(--sd-line); border-radius: 18px; box-shadow: 0 10px 40px rgba(16, 45, 47, .12); padding: 2rem 1.8rem 1.5rem; text-align: center; }
+.sd-login-card .sd-logo { width: 72px; height: 72px; margin: 0 auto .8rem; box-shadow: 0 2px 10px rgba(16,45,47,.15); }
+.sd-login-card .sd-logo img { width: 62px; height: 62px; }
+.sd-login-card .sd-logo-mono { font-size: 1.6rem; }
+.sd-login-card h2 { margin: 0 0 .2rem; font-size: 1.45rem; }
+.sd-login-sub { margin: 0 0 1.3rem; color: var(--sd-muted); font-size: .92rem; }
+.sd-login-card form { text-align: left; }
+.sd-login-card form p { margin: 0 0 .9rem; }
+.sd-login-card label { display: block; font-size: .88rem; font-weight: 600; margin-bottom: .3rem; color: var(--sd-ink); }
+.sd-login-card input[type="text"], .sd-login-card input[type="password"] { width: 100%; box-sizing: border-box; font-size: 1rem; padding: .7rem .8rem; }
+.sd-login-card .login-remember label { display: inline-flex; align-items: center; gap: .4rem; font-weight: 500; }
+.sd-login-card .login-submit input[type="submit"] { width: 100%; background: var(--sd-accent); color: #fff; border: 0; border-radius: 999px; padding: .75rem 1rem; font-size: 1rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(47,111,115,.3); }
+.sd-login-card .login-submit input[type="submit"]:hover, .sd-login-card .login-submit input[type="submit"]:focus { background: var(--sd-accent-dark); }
+.sd-login-links { margin: 1rem 0 0; font-size: .9rem; }
+.sd-login-note { margin: 1.2rem 0 0; padding-top: 1rem; border-top: 1px solid var(--sd-line); font-size: .82rem; color: var(--sd-muted); }
+.sd-app input[type="password"], .sd-app input[type="email"], .sd-app input[type="url"] { font: inherit; border: 1px solid #cfd6d2; border-radius: 8px; padding: .5rem .6rem; background: #fff; }
+.sd-app input[type="url"] { width: 100%; box-sizing: border-box; }
+@media (min-width: 901px) { .sd-nav .sd-nav-main { flex-wrap: nowrap; } .sd-nav-main > li > a, .sd-nav-admin summary { padding: .4rem .7rem; font-size: .95rem; white-space: nowrap; } }
+@media (min-width: 901px) and (max-width: 1080px) { .sd-nav-main > li > a, .sd-nav-admin summary { padding: .38rem .5rem; font-size: .88rem; } .sd-nav-no { display: none; } }

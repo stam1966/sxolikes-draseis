@@ -17,8 +17,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 <?php wp_body_open(); ?>
 <header class="sd-header">
 	<div class="sd-header-inner">
-		<a class="sd-site" href="<?php echo esc_url( SD_Install::app_url() ); ?>"><?php bloginfo( 'name' ); ?></a>
-		<span class="sd-school"><?php echo esc_html( SD_Frontend::school_name() ); ?></span>
+		<a class="sd-brand" href="<?php echo esc_url( SD_Install::app_url() ); ?>">
+			<?php echo SD_Frontend::logo_html(); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+			<span class="sd-brand-txt"><span class="sd-site"><?php bloginfo( 'name' ); ?></span><span class="sd-school"><?php echo esc_html( SD_Frontend::school_name() ); ?></span></span>
+		</a>
 	</div>
 </header>
 <main class="sd-main">

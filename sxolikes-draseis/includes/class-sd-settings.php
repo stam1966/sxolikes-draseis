@@ -36,6 +36,8 @@ class SD_Settings {
 		if ( '' !== $name ) {
 			update_option( 'sd_school_name', $name );
 		}
+		$logo = isset( $_POST['logo_url'] ) ? esc_url_raw( trim( wp_unslash( $_POST['logo_url'] ) ), array( 'https', 'http' ) ) : '';
+		update_option( 'sd_logo_url', $logo );
 		update_option( SD_Ai::OPT_PLACE, $card );
 		if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $dl ) ) {
 			update_option( SD_Workshops::OPT_DEADLINE, $dl );
@@ -53,6 +55,7 @@ class SD_Settings {
 		echo '<h2>Ρυθμίσεις</h2>';
 		SD_Frontend::form_open( 'save_settings' );
 		echo '<section class="sd-card"><label class="sd-block">Όνομα σχολείου (κεφαλίδα και εκτυπώσεις) <input name="school_name" value="' . esc_attr( SD_Frontend::school_name() ) . '"></label>';
+		echo '<label class="sd-block">Λογότυπο σχολείου (διεύθυνση εικόνας, π.χ. το εικονίδιο της ιστοσελίδας του σχολείου· κενό = το εικονίδιο του ιστότοπου ή «ΣΔ») <input type="url" name="logo_url" value="' . esc_attr( (string) get_option( 'sd_logo_url', '' ) ) . '" placeholder="https://…/favicon-150x150.png"></label>';
 		echo '<label class="sd-block">Προθεσμία υποβολής Εντύπου 1Α <input type="date" name="deadline_f1a" value="' . esc_attr( SD_Workshops::deadline() ) . '"></label>';
 		echo '<label class="sd-block">Προθεσμία Εντύπου 2 · Ενεργός Πολίτης (προαιρετικό) <input type="date" name="deadline_f2" value="' . esc_attr( SD_Timeline::deadline_f2() ) . '"></label>';
 		echo '<label class="sd-block">Προθεσμία Σχεδίου Δράσης Τμήματος · Πλατφόρμα 21+ (προαιρετικό) <input type="date" name="deadline_sxtm" value="' . esc_attr( SD_Timeline::deadline_sxtm() ) . '"></label>';

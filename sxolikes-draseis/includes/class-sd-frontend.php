@@ -37,6 +37,10 @@ class SD_Frontend {
 		add_action( 'template_redirect', array( __CLASS__, 'handle_post' ), 5 );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_filter( 'template_include', array( __CLASS__, 'template' ), 99 );
+		add_action( 'login_enqueue_scripts', array( __CLASS__, 'login_assets' ) );
+		add_filter( 'login_headerurl', array( 'SD_Install', 'app_url' ) );
+		add_filter( 'login_headertext', array( __CLASS__, 'login_headertext' ) );
+		add_filter( 'login_message', array( __CLASS__, 'login_title' ) );
 		self::fix_blogname();
 	}
 
@@ -66,6 +70,39 @@ class SD_Frontend {
 	/** Όνομα σχολείου για την κεφαλίδα (ρύθμιση· προεπιλογή το σχολείο μας). */
 	public static function school_name() {
 		return (string) get_option( 'sd_school_name', '22ο Δημοτικό Σχολείο Λαμίας – Ροδίτσας' );
+	}
+
+	/** Λογότυπο: ρύθμιση της Διεύθυνσης ή το εικονίδιο του ιστότοπου. */
+	public static function logo_url() {
+		$u = (string) get_option( 'sd_logo_url', '' );
+		if ( '' === $u && function_exists( 'get_site_icon_url' ) ) {
+			$u = (string) get_site_icon_url( 128 );
+		}
+		return $u;
+	}
+
+	public static function logo_html() {
+		$u = self::logo_url();
+		if ( $u ) {
+			return '<span class="sd-logo"><img src="' . esc_url( $u ) . '" alt=""></span>';
+		}
+		return '<span class="sd-logo"><span class="sd-logo-mono" aria-hidden="true">ΣΔ</span></span>';
+	}
+
+	/* Σελίδες σύνδεσης/κωδικού του WordPress στα χρώματα της εφαρμογής. */
+	public static function login_assets() {
+		wp_enqueue_style( 'sd-login', SD_URL . 'assets/sd-login.css', array(), SD_VERSION );
+		$u = self::logo_url();
+		$css = $u ? '.login h1 a{background-image:url("' . esc_url( $u ) . '")}' : '.login h1 a{background-image:none}';
+		wp_add_inline_style( 'sd-login', $css );
+	}
+
+	public static function login_headertext() {
+		return 'Σχολικές Δράσεις';
+	}
+
+	public static function login_title( $message ) {
+		return '<p class="sd-login-title">Σχολικές Δράσεις<small>' . esc_html( self::school_name() ) . '</small></p>' . $message;
 	}
 
 	/** Το όνομα του ιστότοπου, αν λείπει ή αλλοιώθηκε. */
@@ -244,8 +281,8 @@ class SD_Frontend {
 	}
 
 	private static function login_box() {
-		$html  = '<div class="sd-app sd-login"><h2>Σύνδεση</h2>';
-		$html .= '<p>Η εφαρμογή είναι μόνο για τους εκπαιδευτικούς του σχολείου.</p>';
+		$html  = '<div class="sd-login-wrap"><div class="sd-app sd-login"><div class="sd-login-card">' . self::logo_html();
+		$html .= '<h2>Καλώς ήρθατε</h2><p class="sd-login-sub">Σχολικές Δράσεις · ' . esc_html( self::school_name() ) . '</p>';
 		$html .= wp_login_form(
 			array(
 				'echo'           => false,
@@ -256,7 +293,8 @@ class SD_Frontend {
 				'label_log_in'   => 'Σύνδεση',
 			)
 		);
-		$html .= '<p><a href="' . esc_url( wp_lostpassword_url( SD_Install::app_url() ) ) . '">Ξεχάσατε τον κωδικό σας;</a></p></div>';
+		$html .= '<p class="sd-login-links"><a href="' . esc_url( wp_lostpassword_url( SD_Install::app_url() ) ) . '">Ξεχάσατε τον κωδικό σας;</a></p>';
+		$html .= '<p class="sd-login-note">Μόνο για τους εκπαιδευτικούς του σχολείου. Τον λογαριασμό τον δημιουργεί η Διεύθυνση.</p></div></div></div>';
 		return $html;
 	}
 
