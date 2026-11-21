@@ -40,6 +40,8 @@ class SD_Settings {
 		if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $dl ) ) {
 			update_option( SD_Workshops::OPT_DEADLINE, $dl );
 		}
+		$dl4 = isset( $_POST['deadline_f4'] ) ? sanitize_text_field( wp_unslash( $_POST['deadline_f4'] ) ) : '';
+		update_option( SD_F4::OPT_DEADLINE, preg_match( '/^\d{4}-\d{2}-\d{2}$/', $dl4 ) ? $dl4 : '' );
 		return array( true, $back );
 	}
 
@@ -47,7 +49,8 @@ class SD_Settings {
 		echo '<h2>Ρυθμίσεις</h2>';
 		SD_Frontend::form_open( 'save_settings' );
 		echo '<section class="sd-card"><label class="sd-block">Όνομα σχολείου (κεφαλίδα και εκτυπώσεις) <input name="school_name" value="' . esc_attr( SD_Frontend::school_name() ) . '"></label>';
-		echo '<label class="sd-block">Προθεσμία υποβολής Εντύπου 1Α <input type="date" name="deadline_f1a" value="' . esc_attr( SD_Workshops::deadline() ) . '"></label></section>';
+		echo '<label class="sd-block">Προθεσμία υποβολής Εντύπου 1Α <input type="date" name="deadline_f1a" value="' . esc_attr( SD_Workshops::deadline() ) . '"></label>';
+		echo '<label class="sd-block">Προθεσμία υποβολής Εντύπου 4 (αποτίμηση, προαιρετικό) <input type="date" name="deadline_f4" value="' . esc_attr( SD_F4::deadline() ) . '"></label></section>';
 		echo '<section class="sd-card"><h3>Κάρτα τόπου</h3><p class="sd-help">Μνημεία, φυσικοί χώροι, φορείς, ΚΕΠΕΑ και προγράμματα της περιοχής. Μπαίνει σε κάθε prompt του βοηθού AI, ώστε οι προτάσεις να είναι ρεαλιστικές για τον τόπο μας. Χωρίς προσωπικά στοιχεία.</p>';
 		echo '<textarea name="place_card" rows="12" placeholder="π.χ.&#10;Μνημεία: Κάστρο Λαμίας, ...&#10;Φύση: Σπερχειός, Μαλιακός κόλπος, Οίτη, ...&#10;Φορείς: Δήμος Λαμιέων, ΚΕΠΕΑ ..., Αρχαιολογικό Μουσείο Λαμίας, ...">' . esc_textarea( SD_Ai::place_card() ) . '</textarea></section>';
 		echo '<p><button class="sd-button" type="submit">Αποθήκευση ρυθμίσεων</button></p></form>';

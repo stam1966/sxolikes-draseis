@@ -21,9 +21,12 @@ class SD_Frontend {
 			'sxedia' => array( 'Σχέδια Δράσης', SD_Roles::CAP_ACCESS ),
 			'ergastiria' => array( 'Εργαστήρια (1Α)', SD_Roles::CAP_ACCESS ),
 			'politis'    => array( 'Ενεργός Πολίτης (2)', SD_Roles::CAP_ACCESS ),
+			'aitimata'   => array( 'Επισκέψεις (3)', SD_Roles::CAP_ACCESS ),
+			'apotimisi'  => array( 'Αποτίμηση (4)', SD_Roles::CAP_ACCESS ),
 			'xartis'     => array( 'Χάρτης τόπου', SD_Roles::CAP_ACCESS ),
 			'taxeis' => array( 'Τμήματα', SD_Roles::CAP_MANAGE ),
 			'etos'   => array( 'Σχολικό έτος', SD_Roles::CAP_MANAGE ),
+			'exagoges'   => array( 'Εξαγωγές', SD_Roles::CAP_REVIEW ),
 			'rythmiseis' => array( 'Ρυθμίσεις', SD_Roles::CAP_MANAGE ),
 		);
 	}
@@ -96,7 +99,7 @@ class SD_Frontend {
 		$result = true;
 
 		$plans = SD_Plans::handle( $do );
-		foreach ( array( 'SD_Workshops', 'SD_Citizen', 'SD_Settings', 'SD_Map' ) as $module ) {
+		foreach ( array( 'SD_Workshops', 'SD_Citizen', 'SD_Settings', 'SD_Map', 'SD_Requests', 'SD_F4' ) as $module ) {
 			if ( null === $plans ) {
 				$plans = $module::handle( $do );
 			}
@@ -219,6 +222,15 @@ class SD_Frontend {
 			case 'xartis':
 				SD_Map::render();
 				break;
+			case 'aitimata':
+				SD_Requests::render();
+				break;
+			case 'apotimisi':
+				SD_F4::render();
+				break;
+			case 'exagoges':
+				SD_Exports::render();
+				break;
 			default:
 				self::screen_home();
 		}
@@ -340,6 +352,10 @@ class SD_Frontend {
 			echo '<li>Έντυπα 1Α: υποβλήθηκαν <strong>' . (int) ( ( $counts['ypovlithike'] ?? 0 ) + ( $counts['elegxthike'] ?? 0 ) ) . '</strong>, ελέγχθηκαν <strong>' . (int) ( $counts['elegxthike'] ?? 0 ) . '</strong>, σε εξέλιξη ή επιστροφή <strong>' . (int) ( ( $counts['proxeiro'] ?? 0 ) + ( $counts['epistrafike'] ?? 0 ) + ( $counts['none'] ?? 0 ) ) . '</strong> · <a href="' . esc_url( self::url( 'ergastiria' ) ) . '">Όλα τα έντυπα</a></li>';
 			if ( $classes ) {
 				echo '<li>Τμήματα χωρίς υπεύθυνο Εργαστηρίων: <strong>' . (int) $no_lead . '</strong></li>';
+			}
+			$pending_req = SD_Requests::pending_count( $year->id );
+			if ( $pending_req ) {
+				echo '<li>Αιτήματα επίσκεψης/φορέα (Έντυπο 3) που περιμένουν απόφαση Συλλόγου: <strong>' . (int) $pending_req . '</strong> · <a href="' . esc_url( self::url( 'aitimata' ) ) . '">Επισκέψεις</a></li>';
 			}
 			$pending_places = SD_Map::pending_count( $year->id );
 			if ( $pending_places ) {

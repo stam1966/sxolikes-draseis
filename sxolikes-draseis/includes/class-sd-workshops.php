@@ -576,7 +576,7 @@ class SD_Workshops {
 		}
 		$year = SD_Data::active_year();
 		echo '<div class="sd-print">';
-		echo '<p class="sd-noprint"><button class="sd-button" type="button" onclick="window.print()">Εκτύπωση / Αποθήκευση ως PDF</button></p>';
+		echo '<p class="sd-noprint"><button class="sd-button" type="button" onclick="window.print()">Εκτύπωση / Αποθήκευση ως PDF</button> <a class="sd-button" href="' . esc_url( SD_Exports::url( 'f1a', $class->id ) ) . '">Λήψη σε Word</a></p>';
 		echo '<p><strong>' . esc_html( SD_Frontend::school_name() ) . '</strong></p>';
 		echo '<h2>ΕΝΤΥΠΟ 1Α – Ετήσιος σχεδιασμός Εργαστηρίων Δεξιοτήτων</h2>';
 		echo '<p>Σχολικό έτος ' . esc_html( $year ? $year->label : '' ) . ' · Τμήμα <strong>' . esc_html( SD_Data::class_label( $class ) ) . '</strong> · Εβδομαδιαίες ώρες: ' . (int) $class->workshop_hours . '</p>';
@@ -634,6 +634,75 @@ class SD_Workshops {
 		echo '</tbody></table>';
 		$sub = $form && $form->submitted_at ? mysql2date( 'd/m/Y', $form->submitted_at ) : '…… / …… / 20……';
 		echo '<p>Ημερομηνία υποβολής: ' . esc_html( $sub ) . '</p><p>Ο/Η εκπαιδευτικός (ονοματεπώνυμο – υπογραφή):</p></div>';
+	}
+
+	/** Μπλοκ για το Word: ίδια διάταξη με την εκτυπώσιμη μορφή (στήλες = ενότητες). */
+	public static function doc_blocks( $class ) {
+		$form  = self::form_of_class( $class->id );
+		$units = self::units( $form );
+		$by    = array();
+		foreach ( SD_Data::class_teachers( $class->id ) as $t ) {
+			$u = get_userdata( $t->user_id );
+			if ( $u ) {
+				$by[ $t->class_role ][] = $u->display_name;
+			}
+		}
+		$year   = SD_Data::active_year();
+		$fields = array(
+			'Θεματική ενότητα'              => function ( $u ) {
+				return $u->cycle ? self::CYCLES[ $u->cycle ] : '';
+			},
+			'Υποθεματική'                   => function ( $u ) use ( $class ) {
+				return $u->cycle ? self::subtheme( $class->grade, $u->cycle ) : '';
+			},
+			'Τίτλος προγράμματος'           => function ( $u ) {
+				return $u->title;
+			},
+			'Εβδομάδες'                     => function ( $u ) {
+				return $u->weeks ? (string) $u->weeks : '';
+			},
+			'Κύκλοι δεξιοτήτων'             => function ( $u ) {
+				return self::skills_text( $u->skills );
+			},
+			'Βασικοί στόχοι'                => function ( $u ) {
+				return $u->goals;
+			},
+			'Βασικές δραστηριότητες'        => function ( $u ) {
+				return $u->activities;
+			},
+			'Υλικό'                         => function ( $u ) {
+				return $u->material;
+			},
+			'Σχέδιο Δράσης σχολείου'        => function ( $u ) use ( $class ) {
+				return $u->action_id ? self::action_label( $u->action_id, $class->year_id ) : 'Καμία';
+			},
+			'Ώρες για Δράση Ενεργού Πολίτη' => function ( $u ) {
+				return $u->citizen_hours ? 'Ναι: ' . $u->citizen_hours . ' ώρες' : 'Όχι';
+			},
+			'Επισκέψεις / φορείς'           => function ( $u ) {
+				return $u->visits;
+			},
+			'Παραδοτέο / τεκμήριο'          => function ( $u ) {
+				return $u->deliverable;
+			},
+		);
+		$rows = array();
+		foreach ( $fields as $label => $fn ) {
+			$row = array( $label );
+			foreach ( $units as $u ) {
+				$row[] = (string) $fn( $u );
+			}
+			$rows[] = $row;
+		}
+		return array(
+			array( 'p', SD_Frontend::school_name(), true ),
+			array( 'title', 'ΕΝΤΥΠΟ 1Α – Ετήσιος σχεδιασμός Εργαστηρίων Δεξιοτήτων' ),
+			array( 'p', 'Σχολικό έτος ' . ( $year ? $year->label : '' ) . ' · Τμήμα ' . SD_Data::class_label( $class ) . ' · Εβδομαδιαίες ώρες: ' . (int) $class->workshop_hours ),
+			array( 'p', 'Υπεύθυνος/η: ' . ( isset( $by['ergastiria'] ) ? implode( ', ', $by['ergastiria'] ) : '' ) . ' · ΠΕ70 τμήματος: ' . ( isset( $by['pe70'] ) ? implode( ', ', $by['pe70'] ) : '' ) ),
+			array( 'table', array_merge( array( '' ), array_values( self::UNITS ) ), $rows, array( 0.16, 0.21, 0.21, 0.21, 0.21 ), true ),
+			array( 'p', 'Ημερομηνία υποβολής: ' . ( $form && $form->submitted_at ? mysql2date( 'd/m/Y', $form->submitted_at ) : '…… / …… / 20……' ) ),
+			array( 'p', 'Ο/Η εκπαιδευτικός (ονοματεπώνυμο – υπογραφή):' ),
+		);
 	}
 
 	/** Για την αρχική σελίδα: η κατάσταση των εντύπων του χρήστη ή όλων. */

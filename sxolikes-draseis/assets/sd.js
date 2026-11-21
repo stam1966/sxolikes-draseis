@@ -82,4 +82,19 @@
 			}
 		} );
 	} );
+
+	/* Έντυπο 3: εμφανίζεται μόνο το μέρος (Α ή Β) που επιλέχθηκε. */
+	document.querySelectorAll( '[data-sd-req]' ).forEach( function ( form ) {
+		function sync() {
+			var on = form.querySelector( 'input[name="part"]:checked' );
+			var part = on ? on.value : 'A';
+			form.querySelectorAll( '[data-part]' ).forEach( function ( sec ) {
+				sec.hidden = sec.getAttribute( 'data-part' ) !== part;
+			} );
+		}
+		form.querySelectorAll( 'input[name="part"]' ).forEach( function ( r ) {
+			r.addEventListener( 'change', sync );
+		} );
+		sync();
+	} );
 }() );

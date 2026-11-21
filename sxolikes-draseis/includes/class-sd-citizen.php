@@ -732,7 +732,7 @@ class SD_Citizen {
 			'Διάχυση'                      => implode( ', ', array_filter( array_merge( self::labels( $dep->diffusion, self::DIFFUSION ), array( $dep->diffusion_other ) ) ) ),
 			'Τεκμήρια'                     => implode( ', ', self::labels( $dep->evidence, self::EVIDENCE ) ),
 		);
-		echo '<div class="sd-print"><p class="sd-noprint"><button class="sd-button" type="button" onclick="window.print()">Εκτύπωση / Αποθήκευση ως PDF</button></p>';
+		echo '<div class="sd-print"><p class="sd-noprint"><button class="sd-button" type="button" onclick="window.print()">Εκτύπωση / Αποθήκευση ως PDF</button> <a class="sd-button" href="' . esc_url( SD_Exports::url( 'f2', $dep->id ) ) . '">Λήψη σε Word</a></p>';
 		echo '<p><strong>' . esc_html( SD_Frontend::school_name() ) . '</strong></p><h2>ΕΝΤΥΠΟ 2 – Σχεδιασμός Δράσης Ενεργού Πολίτη</h2><p>Βάσει του Προτύπου της εγκυκλίου 128360/ΓΔ4/28-09-2026 · Σχολικό έτος ' . esc_html( $year ? $year->label : '' ) . '</p>';
 		echo '<table class="sd-print-table"><tbody>';
 		foreach ( $rows as $k => $v ) {
@@ -751,6 +751,53 @@ class SD_Citizen {
 		echo '<tr><th colspan="2">ΣΥΝΟΛΟ</th><th>' . (int) self::stages_total( $dep ) . '</th><td></td></tr></tbody></table>';
 		$sub = $dep->submitted_at ? mysql2date( 'd/m/Y', $dep->submitted_at ) : '…… / …… / 20……';
 		echo '<p>Ημερομηνία υποβολής: ' . esc_html( $sub ) . '</p><p>Ο/Η εκπαιδευτικός (ονοματεπώνυμο – υπογραφή):</p></div>';
+	}
+
+	/** Μπλοκ για το Word: ίδια διάταξη με την εκτυπώσιμη μορφή. */
+	public static function doc_blocks( $dep ) {
+		$class = SD_Data::get_class( $dep->class_id );
+		$year  = SD_Data::active_year();
+		$owner = get_userdata( $dep->owner_id );
+		$kv    = array(
+			array( 'Τάξη / Τμήμα', $class ? SD_Data::class_label( $class ) : '' ),
+			array( 'Υπεύθυνος/η εκπαιδευτικός', $owner ? $owner->display_name : '' ),
+			array( 'Συνεργαζόμενοι/ες', $dep->partners ),
+			array( 'Ηλικιακό επίπεδο ΠΣ', $class ? self::age_group( $class->grade ) : '' ),
+			array( 'Τίτλος δράσης', $dep->title . ( $dep->title_provisional ? ' (προσωρινός)' : '' ) ),
+			array( 'Είδος δράσης', ( self::KINDS[ $dep->kind ] ?? '' ) . ( $dep->kepea ? ' · Συνεργασία ΚΕΠΕΑ / πρόγραμμα: ' . $dep->kepea_note : '' ) ),
+			array( 'Θεματικά πεδία (ΣΒΑ)', implode( ', ', self::labels( $dep->sdgs, self::SDGS ) ) ),
+			array( 'Σύντομη περιγραφή', $dep->description ),
+			array( 'Προσδοκώμενα αποτελέσματα', $dep->outcomes ),
+			array( 'Χώρος', implode( ', ', self::labels( $dep->places, self::PLACES ) ) ),
+			array( 'Αποδέκτης', implode( ', ', self::labels( $dep->audience, self::AUDIENCE ) ) ),
+			array( 'Επίσκεψη εκτός σχολείου', $dep->visit ? $dep->visit : 'Δεν προβλέπεται' ),
+			array( 'Φορέας / ομιλητής στο σχολείο', $dep->visitor ? $dep->visitor : 'Δεν προβλέπεται' ),
+			array( 'Διάχυση', implode( ', ', array_filter( array_merge( self::labels( $dep->diffusion, self::DIFFUSION ), array( $dep->diffusion_other ) ) ) ) ),
+			array( 'Τεκμήρια', implode( ', ', self::labels( $dep->evidence, self::EVIDENCE ) ) ),
+		);
+		$hours = array();
+		foreach ( $dep->hours_arr as $r ) {
+			$hours[] = array( self::SUBJECTS[ $r['subject'] ] ?? '', (string) ( $r['unit'] ?? '' ), (string) (int) ( $r['hours'] ?? 0 ), (string) ( $r['period'] ?? '' ) );
+		}
+		$hours[] = array( 'ΣΥΝΟΛΟ', '', (string) self::hours_total( $dep ), '' );
+		$stages  = array();
+		foreach ( self::STAGES as $k => $l ) {
+			$st       = $dep->stage_arr[ $k ] ?? array( 'activities' => '', 'hours' => 0, 'when' => '' );
+			$stages[] = array( $l, (string) ( $st['activities'] ?? '' ), (string) (int) ( $st['hours'] ?? 0 ), (string) ( $st['when'] ?? '' ) );
+		}
+		$stages[] = array( 'ΣΥΝΟΛΟ', '', (string) self::stages_total( $dep ), '' );
+		return array(
+			array( 'p', SD_Frontend::school_name(), true ),
+			array( 'title', 'ΕΝΤΥΠΟ 2 – Σχεδιασμός Δράσης Ενεργού Πολίτη' ),
+			array( 'p', 'Βάσει του Προτύπου της εγκυκλίου 128360/ΓΔ4/28-09-2026 · Σχολικό έτος ' . ( $year ? $year->label : '' ) ),
+			array( 'kv', $kv ),
+			array( 'h', 'Κατανομή των 10 διδακτικών ωρών' ),
+			array( 'table', array( 'Μάθημα', 'Ενότητα / κεφάλαιο', 'Ώρες', 'Περίοδος' ), $hours, array( 0.3, 0.4, 0.1, 0.2 ) ),
+			array( 'h', 'Φάσεις υλοποίησης' ),
+			array( 'table', array( 'Φάση', 'Δραστηριότητες / εργαλεία', 'Ώρες', 'Πότε' ), $stages, array( 0.28, 0.47, 0.08, 0.17 ), true ),
+			array( 'p', 'Ημερομηνία υποβολής: ' . ( $dep->submitted_at ? mysql2date( 'd/m/Y', $dep->submitted_at ) : '…… / …… / 20……' ) ),
+			array( 'p', 'Ο/Η εκπαιδευτικός (ονοματεπώνυμο – υπογραφή):' ),
+		);
 	}
 
 	/** Για την αρχική: δράσεις των τμημάτων του χρήστη. */
