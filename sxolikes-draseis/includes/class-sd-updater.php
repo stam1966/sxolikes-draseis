@@ -30,6 +30,8 @@ class SD_Updater {
 		add_filter( 'upgrader_source_selection', array( __CLASS__, 'fix_folder' ), 10, 4 );
 		add_action( 'upgrader_process_complete', array( __CLASS__, 'clear' ), 10, 0 );
 		add_filter( 'plugin_row_meta', array( __CLASS__, 'row_meta' ), 10, 2 );
+		add_action( 'admin_post_sd_update_check', array( __CLASS__, 'admin_check' ) );
+		add_action( 'admin_notices', array( __CLASS__, 'admin_notice' ) );
 	}
 
 	public static function basename() {
@@ -264,8 +266,52 @@ class SD_Updater {
 
 	public static function row_meta( $links, $file ) {
 		if ( self::basename() === $file ) {
+			if ( current_user_can( 'update_plugins' ) ) {
+				$url     = wp_nonce_url( admin_url( 'admin-post.php?action=sd_update_check' ), 'sd_update_check' );
+				$links[] = '<a href="' . esc_url( $url ) . '"><strong>Έλεγχος για ενημέρωση</strong></a>';
+			}
 			$links[] = '<a href="' . esc_url( self::REPO ) . '" target="_blank" rel="noopener noreferrer">GitHub</a>';
 		}
 		return $links;
+	}
+
+	/** «Έλεγχος για ενημέρωση» από τη σελίδα «Πρόσθετα»: ρωτά το GitHub τώρα και επιστρέφει εκεί. */
+	public static function admin_check() {
+		if ( ! current_user_can( 'update_plugins' ) ) {
+			wp_die( 'Δεν έχετε δικαίωμα.', 403 );
+		}
+		check_admin_referer( 'sd_update_check' );
+		$info = self::check_now();
+		$have = self::installed_version();
+		if ( ! $info ) {
+			$msg = 'fail';
+		} elseif ( version_compare( $info['version'], $have, '>' ) ) {
+			$msg = 'new';
+		} else {
+			$msg = 'same';
+		}
+		wp_safe_redirect( admin_url( 'plugins.php?sd_check=' . $msg ) );
+		exit;
+	}
+
+	public static function admin_notice() {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || 'plugins' !== $screen->id || empty( $_GET['sd_check'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- μόνο εμφάνιση μηνύματος
+			return;
+		}
+		$c    = get_site_transient( self::CACHE );
+		$new  = is_array( $c ) && ! empty( $c['version'] ) ? $c['version'] : '';
+		$code = sanitize_key( wp_unslash( $_GET['sd_check'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( 'new' === $code ) {
+			$text  = 'Σχολικές Δράσεις: βρέθηκε νέα έκδοση ' . $new . '. Πατήστε «Ενημέρωση τώρα» κάτω από το πρόσθετο.';
+			$class = 'notice-warning';
+		} elseif ( 'same' === $code ) {
+			$text  = 'Σχολικές Δράσεις: έχετε την τελευταία έκδοση (' . self::installed_version() . ').';
+			$class = 'notice-success';
+		} else {
+			$text  = 'Σχολικές Δράσεις: ο έλεγχος στο GitHub απέτυχε. Δοκιμάστε ξανά σε λίγο.';
+			$class = 'notice-error';
+		}
+		echo '<div class="notice ' . esc_attr( $class ) . ' is-dismissible"><p>' . esc_html( $text ) . '</p></div>';
 	}
 }
