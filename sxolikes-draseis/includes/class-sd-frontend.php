@@ -29,6 +29,7 @@ class SD_Frontend {
 			'xristes'    => array( 'Χρήστες', SD_Roles::CAP_MANAGE, 'admin' ),
 			'etos'       => array( 'Σχολικό έτος', SD_Roles::CAP_MANAGE, 'admin' ),
 			'rythmiseis' => array( 'Ρυθμίσεις', SD_Roles::CAP_MANAGE, 'admin' ),
+			'voitheia'   => array( 'Βοήθεια', SD_Roles::CAP_ACCESS, 'hidden' ),
 		);
 	}
 
@@ -137,7 +138,7 @@ class SD_Frontend {
 		$result = true;
 
 		$plans = SD_Plans::handle( $do );
-		foreach ( array( 'SD_Workshops', 'SD_Citizen', 'SD_Settings', 'SD_Map', 'SD_Requests', 'SD_F4', 'SD_Users', 'SD_ErgPlan', 'SD_AiField' ) as $module ) {
+		foreach ( array( 'SD_Workshops', 'SD_Citizen', 'SD_Settings', 'SD_Map', 'SD_Requests', 'SD_F4', 'SD_Users', 'SD_ErgPlan', 'SD_AiField', 'SD_PlanImport' ) as $module ) {
 			if ( null === $plans ) {
 				$plans = $module::handle( $do );
 			}
@@ -273,6 +274,9 @@ class SD_Frontend {
 			case 'xristes':
 				SD_Users::render();
 				break;
+			case 'voitheia':
+				SD_Guide::render();
+				break;
 			default:
 				self::screen_home();
 		}
@@ -305,7 +309,7 @@ class SD_Frontend {
 		$admin = '';
 		$in_admin = false;
 		foreach ( self::screens() as $key => $def ) {
-			if ( ! current_user_can( $def[1] ) ) {
+			if ( ! current_user_can( $def[1] ) || 'hidden' === $def[2] ) {
 				continue;
 			}
 			$tag  = ( '' !== $def[2] && 'admin' !== $def[2] ) ? ' <span class="sd-nav-no">' . esc_html( $def[2] ) . '</span>' : '';
@@ -338,6 +342,7 @@ class SD_Frontend {
 		if ( $year ) {
 			echo ' · <strong>' . esc_html( $year->label ) . '</strong>';
 		}
+		echo ' · <a href="' . esc_url( self::url( 'voitheia' ) ) . '"' . ( 'voitheia' === $current ? ' aria-current="page"' : '' ) . '>Βοήθεια</a>';
 		echo ' · <a href="' . esc_url( wp_logout_url( SD_Install::app_url() ) ) . '">Αποσύνδεση</a>';
 		echo '</div></nav>';
 	}

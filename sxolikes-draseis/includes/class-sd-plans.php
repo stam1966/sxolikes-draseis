@@ -515,7 +515,9 @@ class SD_Plans {
 	}
 
 	public static function render() {
-		if ( isset( $_GET['copy'] ) ) {
+		if ( isset( $_GET['eisagogi'] ) ) {
+			SD_PlanImport::render( absint( $_GET['eisagogi'] ) );
+		} elseif ( isset( $_GET['copy'] ) ) {
 			self::render_copy( absint( $_GET['copy'] ) );
 		} elseif ( isset( $_GET['id'] ) ) {
 			self::render_plan( absint( $_GET['id'] ) );
@@ -604,7 +606,7 @@ class SD_Plans {
 			SD_AiField::mark( 'plan', $plan->id );
 		}
 
-		echo '<p><a href="' . esc_url( SD_Frontend::url( 'sxedia' ) ) . '">← Όλα τα σχέδια</a> · <a href="' . esc_url( SD_Frontend::url( 'sxedia', array( 'copy' => $plan->id ) ) ) . '">Κείμενα για την πλατφόρμα</a> · <a href="' . esc_url( SD_Exports::url( 'plan', $plan->id ) ) . '">Λήψη σε Word</a></p>';
+		echo '<p><a href="' . esc_url( SD_Frontend::url( 'sxedia' ) ) . '">← Όλα τα σχέδια</a> · <a href="' . esc_url( SD_Frontend::url( 'sxedia', array( 'copy' => $plan->id ) ) ) . '">Κείμενα για την πλατφόρμα</a> · <a href="' . esc_url( SD_Exports::url( 'plan', $plan->id ) ) . '">Λήψη σε Word</a>' . ( $edit ? ' · <a href="' . esc_url( SD_Frontend::url( 'sxedia', array( 'eisagogi' => $plan->id ) ) ) . '">Εισαγωγή από την πλατφόρμα</a>' : '' ) . '</p>';
 		echo '<h2>' . esc_html( trim( $plan->code . ' ' . $plan->title ) ) . '</h2>';
 		echo '<p class="sd-meta">' . esc_html( SD_Eval::function_label( $plan->axis ) ) . ' · Άξονας ' . (int) $plan->axis . ': ' . esc_html( SD_Eval::axis_label( $plan->axis ) ) . '</p>';
 

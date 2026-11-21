@@ -95,6 +95,9 @@ class SD_Exports {
 				}
 				SD_Office::send_docx( self::slug( 'Σχεδιο-Δρασης-Σχολικης-Μοναδας-Εργαστηρια-' . $y ), SD_ErgPlan::school_blocks( $year ) );
 				break;
+			case 'odigos':
+				SD_Office::send_docx( self::slug( 'Οδηγος-Σχολικες-Δρασεις' ), SD_Guide::doc_blocks( 1 === $id ) );
+				break;
 			case 'symvoulos':
 				if ( ! $year || ! current_user_can( SD_Roles::CAP_REVIEW ) ) {
 					$deny();

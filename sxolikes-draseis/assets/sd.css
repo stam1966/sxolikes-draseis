@@ -407,3 +407,22 @@ body.sd-body {
 .sd-app input[type="url"] { width: 100%; box-sizing: border-box; }
 @media (min-width: 901px) { .sd-nav .sd-nav-main { flex-wrap: nowrap; } .sd-nav-main > li > a, .sd-nav-admin summary { padding: .4rem .7rem; font-size: .95rem; white-space: nowrap; } }
 @media (min-width: 901px) and (max-width: 1080px) { .sd-nav-main > li > a, .sd-nav-admin summary { padding: .38rem .5rem; font-size: .88rem; } .sd-nav-no { display: none; } }
+
+/* Εισαγωγή σχεδίου από την πλατφόρμα */
+.sd-steps { padding-left: 1.3rem; margin: .3rem 0 .8rem; }
+.sd-steps li { margin: .3rem 0; }
+.sd-app kbd { font: inherit; font-size: .85em; padding: .05rem .35rem; border: 1px solid var(--sd-line); border-bottom-width: 2px; border-radius: 4px; background: #fff; }
+.sd-imp-goal { border-top: 1px solid var(--sd-line); padding-top: .7rem; margin-top: .7rem; }
+.sd-imp-goal h4 { margin: 0 0 .3rem; color: var(--sd-accent-dark); }
+.sd-imp-acts { padding-left: 1.2rem; }
+.sd-imp-acts li { margin: 0 0 .6rem; }
+
+/* Οδηγός χρήστη */
+.sd-toc ol { margin: .4rem 0 0; padding-left: 1.3rem; columns: 2 260px; }
+.sd-toc li { margin: .15rem 0; }
+.sd-guide h4 { margin: .8rem 0 .2rem; color: var(--sd-accent-dark); font-size: 1rem; }
+.sd-guide ul { margin: 0; padding-left: 1.2rem; }
+.sd-guide li { margin: .25rem 0; }
+details.sd-guide > summary { cursor: pointer; font-weight: 700; color: var(--sd-ink); }
+.sd-guide-others { margin: 1.5rem 0 .6rem; color: var(--sd-muted); }
+.sd-who a[aria-current="page"] { font-weight: 700; }
