@@ -11,12 +11,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SD_Settings {
 
 	public static function handle( $do ) {
-		if ( ! in_array( $do, array( 'save_settings', 'update_check' ), true ) ) {
+		if ( ! in_array( $do, array( 'save_settings', 'update_check', 'load_place_card' ), true ) ) {
 			return null;
 		}
 		$back = SD_Frontend::url( 'rythmiseis' );
 		if ( ! current_user_can( SD_Roles::CAP_MANAGE ) ) {
 			return array( new WP_Error( 'sd', 'Μόνο η Διεύθυνση αλλάζει τις ρυθμίσεις.' ), $back );
+		}
+		if ( 'load_place_card' === $do ) {
+			$card = file_get_contents( SD_DIR . 'data/karta-topou.txt' ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+			if ( ! $card ) {
+				return array( new WP_Error( 'sd', 'Η έτοιμη κάρτα τόπου δεν βρέθηκε.' ), $back );
+			}
+			update_option( SD_Ai::OPT_PLACE, sanitize_textarea_field( $card ) );
+			return array( true, $back );
 		}
 		if ( 'update_check' === $do ) {
 			$info = SD_Updater::check_now();
@@ -43,6 +51,10 @@ class SD_Settings {
 		echo '<section class="sd-card"><h3>Κάρτα τόπου</h3><p class="sd-help">Μνημεία, φυσικοί χώροι, φορείς, ΚΕΠΕΑ και προγράμματα της περιοχής. Μπαίνει σε κάθε prompt του βοηθού AI, ώστε οι προτάσεις να είναι ρεαλιστικές για τον τόπο μας. Χωρίς προσωπικά στοιχεία.</p>';
 		echo '<textarea name="place_card" rows="12" placeholder="π.χ.&#10;Μνημεία: Κάστρο Λαμίας, ...&#10;Φύση: Σπερχειός, Μαλιακός κόλπος, Οίτη, ...&#10;Φορείς: Δήμος Λαμιέων, ΚΕΠΕΑ ..., Αρχαιολογικό Μουσείο Λαμίας, ...">' . esc_textarea( SD_Ai::place_card() ) . '</textarea></section>';
 		echo '<p><button class="sd-button" type="submit">Αποθήκευση ρυθμίσεων</button></p></form>';
+
+		SD_Frontend::form_open( 'load_place_card' );
+		echo '<p class="sd-help">Έτοιμη κάρτα τόπου για τη Ροδίτσα και τη Φθιώτιδα, ελεγμένη με επίσημες πηγές (ίδια βάση με τον Χάρτη τόπου). Αντικαθιστά ό,τι έχει γραφτεί παραπάνω.</p>';
+		echo '<p><button class="sd-button sd-small" type="submit" onclick="return confirm(\'Να αντικατασταθεί η κάρτα τόπου με την έτοιμη;\');">Φόρτωση έτοιμης κάρτας τόπου</button></p></form>';
 
 		echo '<section class="sd-card" id="enimeroseis"><h3>Ενημερώσεις της εφαρμογής</h3><p>' . SD_Updater::status_html() . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<p class="sd-help">Οι νέες εκδόσεις έρχονται από το GitHub και εμφανίζονται στα «Πρόσθετα» της διαχείρισης του WordPress. Εκεί μπορείτε να ενεργοποιήσετε και τις αυτόματες ενημερώσεις.</p>';

@@ -201,6 +201,35 @@ class SD_Data {
 				PRIMARY KEY  (id),
 				KEY goal_id (goal_id)
 			) $c;",
+			'CREATE TABLE ' . self::table( 'places' ) . " (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				year_id bigint(20) unsigned NOT NULL,
+				class_id bigint(20) unsigned NOT NULL,
+				owner_id bigint(20) unsigned NOT NULL DEFAULT 0,
+				status varchar(12) NOT NULL DEFAULT 'proxeiro',
+				name varchar(120) NOT NULL DEFAULT '',
+				lat decimal(9,6) NOT NULL DEFAULT 0,
+				lng decimal(9,6) NOT NULL DEFAULT 0,
+				approx tinyint(1) NOT NULL DEFAULT 0,
+				cat varchar(12) NOT NULL DEFAULT '',
+				period varchar(120) NOT NULL DEFAULT '',
+				summary text NOT NULL,
+				activity text NOT NULL,
+				sources text NOT NULL,
+				photo_id bigint(20) unsigned NOT NULL DEFAULT 0,
+				photo_credit varchar(200) NOT NULL DEFAULT '',
+				citizen_id bigint(20) unsigned NOT NULL DEFAULT 0,
+				review_note text NOT NULL,
+				submitted_at datetime DEFAULT NULL,
+				reviewed_by bigint(20) unsigned NOT NULL DEFAULT 0,
+				reviewed_at datetime DEFAULT NULL,
+				created_at datetime NOT NULL,
+				updated_at datetime NOT NULL,
+				PRIMARY KEY  (id),
+				KEY year_id (year_id),
+				KEY class_id (class_id),
+				KEY status (status)
+			) $c;",
 		);
 	}
 

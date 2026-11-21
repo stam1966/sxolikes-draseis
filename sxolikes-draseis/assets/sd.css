@@ -135,3 +135,4 @@ fieldset.sd-card legend { font-weight: 600; padding: 0 .3rem; }
 	.sd-table tr { display: block; border: 1px solid var(--sd-line); border-radius: 8px; margin-bottom: .6rem; padding: .3rem; }
 	.sd-table td { display: block; border: 0; padding: .2rem .4rem; }
 }
+.sd-inline { display: inline-flex; align-items: center; gap: .35rem; margin: .4rem 0; font-size: .9rem; }

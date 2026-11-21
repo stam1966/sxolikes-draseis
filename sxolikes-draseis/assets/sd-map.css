@@ -1,0 +1,91 @@
+/* Σχολικές Δράσεις — Χάρτης Τοπικής Ιστορίας */
+.sd-map-wrap { margin: 0 0 1rem; }
+.sd-map-shell {
+	display: grid; grid-template-columns: minmax(0, 1fr) 340px; height: 640px;
+	border: 1px solid #d9dee3; border-radius: 8px; overflow: hidden; background: #fff;
+	font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif; color: #1f2933;
+}
+.sd-map-canvas { position: relative; min-width: 0; min-height: 0; }
+.sd-map-canvas .leaflet-container, .sd-map-canvas > .leaflet-container { height: 100%; }
+.sd-map-canvas { height: 100%; }
+.sd-map-side { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid #d9dee3; background: #f9fafb; }
+.sd-map-tools { display: grid; gap: .4rem; padding: .7rem .7rem .4rem; }
+.sd-map-tools input, .sd-map-tools select { font: inherit; font-size: .95rem; padding: .45rem .55rem; border: 1px solid #c3cad1; border-radius: 6px; background: #fff; width: 100%; box-sizing: border-box; }
+.sd-chips { display: flex; flex-wrap: wrap; gap: .3rem; padding: 0 .7rem .4rem; }
+.sd-chip { font: inherit; font-size: .8rem; border: 1px solid #c3cad1; background: #fff; border-radius: 99px; padding: .2rem .55rem; cursor: pointer; display: inline-flex; align-items: center; gap: .3rem; color: #1f2933; }
+.sd-chip.is-on { background: #1d5fa8; border-color: #1d5fa8; color: #fff; }
+.sd-dot { width: .7rem; height: .7rem; border-radius: 50%; display: inline-block; flex: none; }
+.sd-map-count { margin: 0; padding: .1rem .8rem .4rem; font-size: .82rem; color: #5f6b76; }
+.sd-map-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; border-top: 1px solid #e3e7eb; }
+.sd-map-list button {
+	font: inherit; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid #eceff2;
+	padding: .5rem .8rem; cursor: pointer; display: grid; grid-template-columns: auto 1fr; column-gap: .5rem; align-items: center; color: #1f2933;
+}
+.sd-map-list button:hover, .sd-map-list button:focus-visible { background: #eaf1fa; outline: none; }
+.sd-map-list button.is-active { background: #dce9f7; }
+.sd-li-name { font-weight: 600; font-size: .92rem; }
+.sd-li-meta { grid-column: 2; font-size: .78rem; color: #5f6b76; }
+.sd-map-note { margin: 0; padding: .5rem .8rem; font-size: .75rem; color: #5f6b76; border-top: 1px solid #e3e7eb; }
+
+.sd-route { padding: .5rem .8rem .6rem; border-top: 1px solid #e3e7eb; background: #fff; }
+.sd-route h3 { margin: 0 0 .2rem; font-size: 1rem; }
+.sd-route ol { margin: .4rem 0; padding-left: 1.3rem; }
+.sd-route ol button { display: block; width: 100%; font: inherit; background: none; border: 0; padding: .1rem 0; cursor: pointer; color: #1d5fa8; text-align: left; }
+.sd-route ol button.is-active { font-weight: 700; color: #1f2933; }
+.sd-route-nav { display: flex; flex-wrap: wrap; gap: .3rem; margin: .3rem 0 0; }
+.sd-btn { font: inherit; font-size: .85rem; border: 1px solid #c3cad1; background: #fff; border-radius: 6px; padding: .3rem .6rem; cursor: pointer; }
+.sd-btn-main { background: #1d5fa8; color: #fff; border-color: #1d5fa8; }
+
+.sd-pin-wrap { background: none; border: 0; }
+.sd-pin {
+	display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; margin: 2px;
+	background: var(--c); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .45); color: #fff; font: 700 12px/1 system-ui, sans-serif;
+}
+.sd-pin-approx { border-style: dashed; border-color: #111; }
+.sd-pin-class { border-radius: 4px; }
+.sd-school-pin { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #ffd54a; border: 2px solid #1f2933; font-size: 16px; line-height: 1; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+
+.sd-map-ctl button, .sd-map-ctl a { display: block; font: 600 12px/1 system-ui, sans-serif; padding: 8px 8px; background: #fff; border: 0; border-bottom: 1px solid #ccc; cursor: pointer; color: #1f2933; text-decoration: none; width: auto; height: auto; min-width: 30px; text-align: center; }
+.sd-map-ctl :last-child { border-bottom: 0; }
+.sd-measure-info { position: absolute; z-index: 800; left: 50%; transform: translateX(-50%); bottom: 18px; background: #1f2933; color: #fff; padding: .45rem .8rem; border-radius: 6px; font-size: .9rem; }
+
+.sd-pop h3 { margin: 0 0 .25rem; font-size: 1.05rem; }
+.sd-pop p { margin: .35rem 0; }
+.sd-pop img { width: 100%; height: auto; border-radius: 6px; margin: .3rem 0 0; }
+.sd-pop-meta { display: flex; align-items: center; gap: .35rem; color: #5f6b76; font-size: .85rem; }
+.sd-pop-credit { font-size: .75rem; color: #5f6b76; margin-top: 0; }
+.sd-pop-act { background: #f3f7fc; border-left: 3px solid #1d5fa8; padding: .3rem .5rem; }
+.sd-pop-facts { margin: .4rem 0; padding-left: 1.1rem; font-size: .82rem; color: #3b4651; }
+.sd-pop-src { font-size: .8rem; color: #5f6b76; word-break: break-word; }
+.leaflet-popup-content { margin: 12px 14px; line-height: 1.45; font-size: .92rem; }
+
+/* Προβολή στην τάξη */
+.sd-map-shell.is-big { height: 82vh; grid-template-columns: minmax(0, 1fr) 400px; }
+.sd-map-shell.is-big .sd-li-name { font-size: 1.15rem; }
+.sd-map-shell.is-big .sd-li-meta { font-size: .95rem; }
+.sd-map-shell.is-big .leaflet-popup-content { font-size: 1.15rem; }
+.sd-map-shell.is-big .sd-pop h3 { font-size: 1.4rem; }
+.sd-map-shell.is-big .sd-pin { width: 28px; height: 28px; font-size: 15px; }
+.sd-map-shell:fullscreen { height: 100vh; width: 100vw; border-radius: 0; }
+
+/* Φόρμα: επιλογή θέσης */
+.sd-pick { height: 340px; border: 1px solid #d9dee3; border-radius: 8px; margin: .5rem 0; }
+
+/* Δημόσια σελίδα */
+body.sd-map-public { margin: 0; background: #f6f8fa; }
+.sd-map-head { padding: .6rem 16px; background: #1d5fa8; color: #fff; display: flex; flex-wrap: wrap; gap: .25rem 1rem; align-items: baseline; font-family: system-ui, sans-serif; }
+.sd-map-head span { opacity: .9; font-size: .9rem; }
+body.sd-map-public .sd-map-wrap { margin: 0; }
+body.sd-map-public .sd-map-shell { height: calc(100vh - 44px); border-radius: 0; border: 0; }
+body.sd-map-embed .sd-map-shell { height: 100vh; }
+
+@media (max-width: 800px) {
+	.sd-map-shell, .sd-map-shell.is-big { display: flex; flex-direction: column; height: auto; }
+	.sd-map-canvas { height: 62vh; min-height: 340px; }
+	.sd-map-side { border-left: 0; border-top: 1px solid #d9dee3; max-height: 70vh; }
+	body.sd-map-public .sd-map-shell, body.sd-map-embed .sd-map-shell { height: auto; }
+}
+@media print {
+	.sd-map-wrap { display: none; }
+	.sd-noprint { display: none; }
+}

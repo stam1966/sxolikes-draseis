@@ -21,6 +21,7 @@ class SD_Frontend {
 			'sxedia' => array( 'Σχέδια Δράσης', SD_Roles::CAP_ACCESS ),
 			'ergastiria' => array( 'Εργαστήρια (1Α)', SD_Roles::CAP_ACCESS ),
 			'politis'    => array( 'Ενεργός Πολίτης (2)', SD_Roles::CAP_ACCESS ),
+			'xartis'     => array( 'Χάρτης τόπου', SD_Roles::CAP_ACCESS ),
 			'taxeis' => array( 'Τμήματα', SD_Roles::CAP_MANAGE ),
 			'etos'   => array( 'Σχολικό έτος', SD_Roles::CAP_MANAGE ),
 			'rythmiseis' => array( 'Ρυθμίσεις', SD_Roles::CAP_MANAGE ),
@@ -44,6 +45,12 @@ class SD_Frontend {
 		if ( self::is_app_page() ) {
 			wp_enqueue_style( 'sd-app', SD_URL . 'assets/sd.css', array(), SD_VERSION );
 			wp_enqueue_script( 'sd-app', SD_URL . 'assets/sd.js', array(), SD_VERSION, true );
+			if ( isset( $_GET['sd'] ) && 'xartis' === $_GET['sd'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+				wp_enqueue_style( 'leaflet', SD_URL . 'assets/vendor/leaflet/leaflet.css', array(), '1.9.4' );
+				wp_enqueue_style( 'sd-map', SD_URL . 'assets/sd-map.css', array( 'leaflet', 'sd-app' ), SD_VERSION );
+				wp_enqueue_script( 'leaflet', SD_URL . 'assets/vendor/leaflet/leaflet.js', array(), '1.9.4', true );
+				wp_enqueue_script( 'sd-map', SD_URL . 'assets/sd-map.js', array( 'leaflet' ), SD_VERSION, true );
+			}
 		}
 	}
 
@@ -89,7 +96,7 @@ class SD_Frontend {
 		$result = true;
 
 		$plans = SD_Plans::handle( $do );
-		foreach ( array( 'SD_Workshops', 'SD_Citizen', 'SD_Settings' ) as $module ) {
+		foreach ( array( 'SD_Workshops', 'SD_Citizen', 'SD_Settings', 'SD_Map' ) as $module ) {
 			if ( null === $plans ) {
 				$plans = $module::handle( $do );
 			}
@@ -208,6 +215,9 @@ class SD_Frontend {
 				break;
 			case 'rythmiseis':
 				SD_Settings::render();
+				break;
+			case 'xartis':
+				SD_Map::render();
 				break;
 			default:
 				self::screen_home();
@@ -330,6 +340,10 @@ class SD_Frontend {
 			echo '<li>Έντυπα 1Α: υποβλήθηκαν <strong>' . (int) ( ( $counts['ypovlithike'] ?? 0 ) + ( $counts['elegxthike'] ?? 0 ) ) . '</strong>, ελέγχθηκαν <strong>' . (int) ( $counts['elegxthike'] ?? 0 ) . '</strong>, σε εξέλιξη ή επιστροφή <strong>' . (int) ( ( $counts['proxeiro'] ?? 0 ) + ( $counts['epistrafike'] ?? 0 ) + ( $counts['none'] ?? 0 ) ) . '</strong> · <a href="' . esc_url( self::url( 'ergastiria' ) ) . '">Όλα τα έντυπα</a></li>';
 			if ( $classes ) {
 				echo '<li>Τμήματα χωρίς υπεύθυνο Εργαστηρίων: <strong>' . (int) $no_lead . '</strong></li>';
+			}
+			$pending_places = SD_Map::pending_count( $year->id );
+			if ( $pending_places ) {
+				echo '<li>Σημεία χάρτη για έγκριση: <strong>' . (int) $pending_places . '</strong> · <a href="' . esc_url( self::url( 'xartis' ) ) . '">Χάρτης</a></li>';
 			}
 			echo '</ul><p><a class="sd-button" href="' . esc_url( self::url( 'taxeis' ) ) . '">Διαχείριση τμημάτων</a></p></section>';
 		}
