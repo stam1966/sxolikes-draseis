@@ -271,3 +271,6 @@ fieldset.sd-card legend { font-weight: 600; padding: 0 .3rem; }
 @media (prefers-reduced-motion: reduce) { .sd-ai-wait::before { animation: none; } }
 .sd-ai-warn { margin: .3rem 0 0; color: var(--sd-warn, #8a4b00); font-weight: 600; }
 @media print { .sd-ai-btn, .sd-ai-panel { display: none !important; } }
+
+.sd-ai-check { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .6rem 0 0; padding-top: .5rem; border-top: 1px dashed #d7c9f3; }
+.sd-ai-check-label { font-size: .85rem; font-weight: 600; color: #5b3ca8; }

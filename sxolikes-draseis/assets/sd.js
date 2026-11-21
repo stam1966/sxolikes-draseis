@@ -338,8 +338,48 @@
 		} );
 		panel.appendChild( row );
 		if ( prompt ) {
+			// Δεύτερη γνώμη: prompt που ζητά από άλλο AI να ελέγξει την πρόταση.
+			var limitTxt = limit ? ' (όριο ' + limit + ' χαρακτήρες)' : '';
+			var review = prompt +
+				'\n\n---\nΟι οδηγίες μορφής παραπάνω αφορούσαν την αρχική πρόταση. Τώρα ζητώ έλεγχο.' +
+				'\nΈνα εργαλείο AI πρότεινε για το πεδίο «' + labelOf( el ) + '»' + limitTxt + ' το εξής κείμενο:\n«' + text + '»' +
+				'\n\nΈλεγξε την πρόταση ως δεύτερη γνώμη:' +
+				'\n1. Είναι ακριβής και ρεαλιστική για δημόσιο Δημοτικό Σχολείο; Υπάρχουν τοπικά στοιχεία (μνημεία, φορείς, προγράμματα, ημερομηνίες) που μπορεί να είναι λάθος ή επινοημένα;' +
+				'\n2. Ταιριάζει στο πεδίο του εντύπου και στην ηλικία των παιδιών;' +
+				'\n3. Σέβεται το όριο χαρακτήρων, αν υπάρχει;' +
+				'\nΓράψε σύντομα τι θα άλλαζες και γιατί, και μετά μια διορθωμένη εκδοχή, έτοιμη να μπει στο έντυπο.';
+			var chk = document.createElement( 'div' );
+			chk.className = 'sd-ai-check';
+			var lab = document.createElement( 'span' );
+			lab.className = 'sd-ai-check-label';
+			lab.textContent = 'Έλεγχος σε άλλο AI:';
+			chk.appendChild( lab );
+			cfg.sites.forEach( function ( s ) {
+				var b = btn( s.label, 'sd-quiet' );
+				b.title = 'Αντιγράφει prompt ελέγχου (με την πρόταση) και ανοίγει το ' + s.label;
+				b.addEventListener( 'click', function () {
+					copy( review ).then( function () {
+						b.textContent = 'Αντιγράφηκε · ' + s.label;
+					} );
+					window.open( s.url, '_blank', 'noopener' );
+				} );
+				chk.appendChild( b );
+			} );
+			var onlyR = btn( 'Μόνο αντιγραφή', 'sd-quiet' );
+			onlyR.addEventListener( 'click', function () {
+				copy( review ).then( function () {
+					onlyR.textContent = 'Αντιγράφηκε';
+				} );
+			} );
+			chk.appendChild( onlyR );
+			panel.appendChild( chk );
+			var hint = document.createElement( 'p' );
+			hint.className = 'sd-help';
+			hint.textContent = 'Στη νέα καρτέλα κάντε επικόλληση (Ctrl+V). Το άλλο AI ελέγχει την πρόταση και δίνει διορθωμένη εκδοχή.';
+			panel.appendChild( hint );
+
 			var det = document.createElement( 'details' );
-			det.innerHTML = '<summary>Δοκιμή σε άλλο εργαλείο AI</summary>';
+			det.innerHTML = '<summary>Αρχικό prompt (για ανεξάρτητη δεύτερη πρόταση)</summary>';
 			var inner = document.createElement( 'div' );
 			det.appendChild( inner );
 			det.addEventListener( 'toggle', function () {
