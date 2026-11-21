@@ -600,6 +600,9 @@ class SD_Plans {
 		}
 		$edit  = self::can_edit( $plan );
 		$goals = self::goals( $plan->id );
+		if ( $edit ) {
+			SD_AiField::mark( 'plan', $plan->id );
+		}
 
 		echo '<p><a href="' . esc_url( SD_Frontend::url( 'sxedia' ) ) . '">← Όλα τα σχέδια</a> · <a href="' . esc_url( SD_Frontend::url( 'sxedia', array( 'copy' => $plan->id ) ) ) . '">Κείμενα για την πλατφόρμα</a> · <a href="' . esc_url( SD_Exports::url( 'plan', $plan->id ) ) . '">Λήψη σε Word</a></p>';
 		echo '<h2>' . esc_html( trim( $plan->code . ' ' . $plan->title ) ) . '</h2>';

@@ -646,6 +646,9 @@ class SD_Citizen {
 		}
 
 		SD_Ai::render_box( $dep, $class );
+		if ( $edit ) {
+			SD_AiField::mark( 'dep', $dep->id );
+		}
 
 		if ( $edit ) {
 			SD_Frontend::form_open( 'dep_save' );

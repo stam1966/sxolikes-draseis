@@ -416,6 +416,9 @@ class SD_Workshops {
 		$units  = self::units( $form );
 		$edit   = self::can_edit( $class, $form );
 		$issues = self::issues( $units );
+		if ( $edit ) {
+			SD_AiField::mark( 'f1a', $class->id );
+		}
 
 		$by_role = array();
 		foreach ( SD_Data::class_teachers( $class->id ) as $t ) {

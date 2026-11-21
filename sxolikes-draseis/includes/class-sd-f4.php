@@ -337,6 +337,9 @@ class SD_F4 {
 		$f                          = self::form_of_class( $class->id );
 		list( $cycles, $deps, $pl ) = self::prefill( $class, $f );
 		$edit                       = self::can_edit( $class, $f );
+		if ( $edit ) {
+			SD_AiField::mark( 'f4', $class->id );
+		}
 		$dis                        = $edit ? '' : ' disabled';
 
 		echo '<p><a href="' . esc_url( SD_Frontend::url( 'apotimisi' ) ) . '">← Όλα τα τμήματα</a>';

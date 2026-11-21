@@ -150,3 +150,254 @@
 		}
 	} );
 }() );
+
+/* Κουμπί ✨ σε κάθε πεδίο κειμένου: πρόταση AI (με κλειδί API) ή έτοιμο prompt για δωρεάν AI. */
+( function () {
+	'use strict';
+	var node = document.getElementById( 'sd-ai-cfg' );
+	if ( ! node ) {
+		return;
+	}
+	var cfg;
+	try {
+		cfg = JSON.parse( node.textContent );
+	} catch ( e ) {
+		return;
+	}
+
+	function baseName( name ) {
+		return ( name || '' ).replace( /\[.*$/, '' );
+	}
+	function skipped( el ) {
+		return ! el.name || cfg.skip.indexOf( baseName( el.name ) ) !== -1;
+	}
+	// Η ετικέτα ενός πεδίου: το κείμενο του <label> χωρίς το ίδιο το πεδίο, ή η επικεφαλίδα της γραμμής πίνακα.
+	function labelOf( el ) {
+		var lab = el.closest( 'label' );
+		var txt = '';
+		if ( lab ) {
+			lab.childNodes.forEach( function ( n ) {
+				if ( n.nodeType === 3 || ( n.nodeType === 1 && ! n.matches( 'textarea, input, select, button, .sd-counter, .sd-ai-btn, .sd-ai-panel' ) ) ) {
+					txt += ' ' + n.textContent;
+				}
+			} );
+		}
+		if ( ! txt.trim() ) {
+			var row = el.closest( 'tr' );
+			var th = row ? row.querySelector( 'th' ) : null;
+			txt = th ? th.textContent : '';
+		}
+		if ( ! txt.trim() ) {
+			var fs = el.closest( 'fieldset' );
+			var lg = fs ? fs.querySelector( 'legend' ) : null;
+			txt = lg ? lg.textContent : el.name;
+		}
+		// Η ενότητα όπου βρίσκεται το πεδίο (π.χ. θεματικός κύκλος, στόχος), για να μην μπερδεύονται ίδιες ετικέτες.
+		var box = el.closest( 'fieldset, section' );
+		var hd = box ? box.querySelector( 'legend, h3, h4' ) : null;
+		var hs = hd ? hd.textContent.replace( /\s+/g, ' ' ).trim() : '';
+		var ctx = hs && txt.indexOf( hs ) === -1 ? hs + ' – ' : '';
+		return ( ctx + txt ).replace( /\s+/g, ' ' ).trim().slice( 0, 200 );
+	}
+	function others( form, target ) {
+		var out = [];
+		form.querySelectorAll( 'textarea, input[type="text"], input:not([type])' ).forEach( function ( el ) {
+			if ( el === target || skipped( el ) || el.closest( '.sd-ai-panel' ) || ! el.value.trim() ) {
+				return;
+			}
+			out.push( { name: el.name, label: labelOf( el ), value: el.value.slice( 0, 600 ) } );
+		} );
+		return out.slice( 0, 30 );
+	}
+	function request( el, mode ) {
+		var body = new URLSearchParams();
+		body.append( 'action', 'sd_ai_field' );
+		body.append( 'nonce', cfg.nonce );
+		body.append( 'type', cfg.type );
+		body.append( 'id', cfg.id );
+		body.append( 'field', el.name );
+		body.append( 'label', labelOf( el ) );
+		body.append( 'current', el.value );
+		body.append( 'limit', el.getAttribute( 'data-limit' ) || el.getAttribute( 'maxlength' ) || '' );
+		body.append( 'mode', mode );
+		body.append( 'others', JSON.stringify( others( el.form, el ) ) );
+		return fetch( cfg.ajax, { method: 'POST', credentials: 'same-origin', body: body } )
+			.then( function ( r ) {
+				return r.json().catch( function () {
+					return { success: false, data: { msg: 'Μη αναμενόμενη απάντηση (' + r.status + ').' } };
+				} );
+			} );
+	}
+	function btn( text, cls ) {
+		var b = document.createElement( 'button' );
+		b.type = 'button';
+		b.className = 'sd-button sd-small ' + ( cls || '' );
+		b.textContent = text;
+		return b;
+	}
+	function copy( text ) {
+		if ( navigator.clipboard && window.isSecureContext ) {
+			return navigator.clipboard.writeText( text );
+		}
+		var ta = document.createElement( 'textarea' );
+		ta.value = text;
+		document.body.appendChild( ta );
+		ta.select();
+		document.execCommand( 'copy' );
+		ta.remove();
+		return Promise.resolve();
+	}
+	function setValue( el, v ) {
+		el.value = v;
+		el.dispatchEvent( new Event( 'input', { bubbles: true } ) );
+	}
+
+	// Πάνελ «δωρεάν AI»: αντιγραφή του prompt και άνοιγμα της σελίδας που διαλέγει ο/η εκπαιδευτικός.
+	function promptPanel( panel, prompt, note ) {
+		panel.innerHTML = '';
+		var p = document.createElement( 'p' );
+		p.className = 'sd-help';
+		p.textContent = ( note ? note + ' ' : '' ) + 'Πατήστε ένα εργαλείο: το prompt αντιγράφεται και ανοίγει νέα καρτέλα. Εκεί κάντε επικόλληση (Ctrl+V), και φέρτε την απάντηση εδώ στο πεδίο.';
+		panel.appendChild( p );
+		var row = document.createElement( 'div' );
+		row.className = 'sd-ai-actions';
+		cfg.sites.forEach( function ( s ) {
+			var b = btn( 'Αντιγραφή και άνοιγμα ' + s.label );
+			b.addEventListener( 'click', function () {
+				copy( prompt ).then( function () {
+					b.textContent = 'Αντιγράφηκε · ' + s.label;
+				} );
+				window.open( s.url, '_blank', 'noopener' );
+			} );
+			row.appendChild( b );
+		} );
+		var only = btn( 'Μόνο αντιγραφή', 'sd-quiet' );
+		only.addEventListener( 'click', function () {
+			copy( prompt ).then( function () {
+				only.textContent = 'Αντιγράφηκε';
+			} );
+		} );
+		row.appendChild( only );
+		var close = btn( 'Κλείσιμο', 'sd-quiet' );
+		close.addEventListener( 'click', function () {
+			panel.remove();
+		} );
+		row.appendChild( close );
+		panel.appendChild( row );
+		var det = document.createElement( 'details' );
+		det.innerHTML = '<summary>Δείτε το prompt</summary>';
+		var ta = document.createElement( 'textarea' );
+		ta.readOnly = true;
+		ta.rows = 8;
+		ta.value = prompt;
+		det.appendChild( ta );
+		panel.appendChild( det );
+	}
+
+	function answerPanel( panel, el, text, prompt ) {
+		panel.innerHTML = '';
+		var h = document.createElement( 'p' );
+		h.className = 'sd-ai-title';
+		h.textContent = 'Πρόταση AI · ελέγξτε την πριν τη χρησιμοποιήσετε';
+		panel.appendChild( h );
+		var box = document.createElement( 'div' );
+		box.className = 'sd-ai-text';
+		box.textContent = text;
+		panel.appendChild( box );
+		var limit = parseInt( el.getAttribute( 'data-limit' ) || '0', 10 );
+		if ( limit && Array.from( text ).length > limit ) {
+			var w = document.createElement( 'p' );
+			w.className = 'sd-ai-warn';
+			w.textContent = 'Ξεπερνά το όριο των ' + limit + ' χαρακτήρων· θα χρειαστεί συντόμευση.';
+			panel.appendChild( w );
+		}
+		var row = document.createElement( 'div' );
+		row.className = 'sd-ai-actions';
+		var rep = btn( 'Αντικατάσταση' );
+		rep.addEventListener( 'click', function () {
+			setValue( el, text );
+			panel.remove();
+			el.focus();
+		} );
+		var add = btn( 'Προσθήκη στο τέλος', 'sd-quiet' );
+		add.addEventListener( 'click', function () {
+			setValue( el, el.value.trim() ? el.value.replace( /\s+$/, '' ) + '\n' + text : text );
+			panel.remove();
+			el.focus();
+		} );
+		var again = btn( 'Άλλη πρόταση', 'sd-quiet' );
+		again.addEventListener( 'click', function () {
+			run( el, panel );
+		} );
+		var close = btn( 'Απόρριψη', 'sd-quiet' );
+		close.addEventListener( 'click', function () {
+			panel.remove();
+		} );
+		[ rep, add, again, close ].forEach( function ( b ) {
+			row.appendChild( b );
+		} );
+		panel.appendChild( row );
+		if ( prompt ) {
+			var det = document.createElement( 'details' );
+			det.innerHTML = '<summary>Δοκιμή σε άλλο εργαλείο AI</summary>';
+			var inner = document.createElement( 'div' );
+			det.appendChild( inner );
+			det.addEventListener( 'toggle', function () {
+				if ( det.open && ! inner.childNodes.length ) {
+					promptPanel( inner, prompt, '' );
+					inner.querySelectorAll( 'button' ).forEach( function ( b ) {
+						if ( b.textContent === 'Κλείσιμο' ) {
+							b.remove();
+						}
+					} );
+				}
+			} );
+			panel.appendChild( det );
+		}
+	}
+
+	function run( el, panel ) {
+		panel.innerHTML = '<p class="sd-ai-wait" role="status">' + ( cfg.api ? 'Το AI γράφει πρόταση…' : 'Ετοιμάζεται το prompt…' ) + '</p>';
+		request( el, cfg.api ? 'api' : 'prompt' ).then( function ( res ) {
+			var d = res && res.data ? res.data : {};
+			if ( res && res.success && d.text ) {
+				answerPanel( panel, el, d.text, d.prompt );
+			} else if ( res && res.success && d.prompt ) {
+				promptPanel( panel, d.prompt, '' );
+			} else if ( d.prompt ) {
+				promptPanel( panel, d.prompt, d.msg || '' );
+			} else {
+				panel.innerHTML = '';
+				var e = document.createElement( 'p' );
+				e.className = 'sd-ai-warn';
+				e.textContent = d.msg || 'Κάτι πήγε στραβά. Δοκιμάστε ξανά.';
+				panel.appendChild( e );
+			}
+		} ).catch( function () {
+			panel.innerHTML = '<p class="sd-ai-warn">Δεν υπάρχει σύνδεση. Δοκιμάστε ξανά.</p>';
+		} );
+	}
+
+	document.querySelectorAll( 'form.sd-form textarea' ).forEach( function ( el ) {
+		if ( el.readOnly || el.disabled || skipped( el ) || el.closest( '.sd-copy' ) ) {
+			return;
+		}
+		var b = document.createElement( 'button' );
+		b.type = 'button';
+		b.className = 'sd-ai-btn';
+		b.title = cfg.api ? 'Πρόταση AI για αυτό το πεδίο' : 'Prompt για αυτό το πεδίο, για δωρεάν εργαλείο AI';
+		b.setAttribute( 'aria-label', b.title );
+		b.innerHTML = '<span aria-hidden="true">✨</span> AI';
+		var anchor = el.nextElementSibling && el.nextElementSibling.classList.contains( 'sd-counter' ) ? el.nextElementSibling : el;
+		anchor.insertAdjacentElement( 'afterend', b );
+		b.addEventListener( 'click', function () {
+			var panel = b.nextElementSibling && b.nextElementSibling.classList.contains( 'sd-ai-panel' ) ? b.nextElementSibling : null;
+			if ( ! panel ) {
+				panel = document.createElement( 'div' );
+				panel.className = 'sd-ai-panel';
+				b.insertAdjacentElement( 'afterend', panel );
+			}
+			run( el, panel );
+		} );
+	} );
+}() );

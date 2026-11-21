@@ -223,6 +223,9 @@ class SD_ErgPlan {
 		$vals = self::cycle_values( $class );
 		$edit = current_user_can( SD_Roles::CAP_MANAGE ) || SD_Workshops::is_class_teacher( $class->id );
 		$dis  = $edit ? '' : ' disabled';
+		if ( $edit ) {
+			SD_AiField::mark( 'sxtm', $class->id );
+		}
 
 		echo '<p><a href="' . esc_url( SD_Frontend::url( 'ergastiria' ) ) . '">← Εργαστήρια</a> · <a href="' . esc_url( SD_Exports::url( 'sxtm', $class->id ) ) . '">Λήψη σε Word</a> · <a href="' . esc_url( SD_Exports::url( 'prog', $class->id ) ) . '">Προγραμματισμός Εκπαιδευτικών (Word)</a></p>';
 		echo '<h2>Σχέδιο Δράσης του Τμήματος ' . esc_html( SD_Data::class_label( $class ) ) . ' · Εργαστήρια Δεξιοτήτων</h2>';
@@ -255,6 +258,9 @@ class SD_ErgPlan {
 		}
 		$v     = self::school_plan( $year->id );
 		$st    = self::school_stats( $year );
+		if ( current_user_can( SD_Roles::CAP_MANAGE ) ) {
+			SD_AiField::mark( 'sxsm', $year->id );
+		}
 		$edit  = current_user_can( SD_Roles::CAP_MANAGE );
 		$dis   = $edit ? '' : ' disabled';
 		echo '<p><a href="' . esc_url( SD_Frontend::url( 'ergastiria' ) ) . '">← Εργαστήρια</a> · <a href="' . esc_url( SD_Exports::url( 'sxsm', 0 ) ) . '">Λήψη σε Word</a></p>';

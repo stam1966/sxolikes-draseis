@@ -89,6 +89,11 @@ class SD_Ai {
 		return implode( "\n", $lines );
 	}
 
+	/** Το κοινό πλαίσιο της δράσης (και για το κουμπί ✨ των πεδίων). */
+	public static function common_context( $dep, $class ) {
+		return self::common( $dep, $class );
+	}
+
 	/** Τα τρία prompts: [τίτλος, κείμενο]. */
 	public static function prompts( $dep, $class ) {
 		$base = self::common( $dep, $class );
