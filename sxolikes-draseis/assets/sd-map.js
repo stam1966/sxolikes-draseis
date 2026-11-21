@@ -11,6 +11,14 @@
 	var GRADES = ['', 'Α΄', 'Β΄', 'Γ΄', 'Δ΄', 'Ε΄', 'ΣΤ΄'];
 	var TILE = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 	var ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+	/* Ανάγλυφο για τη Γεωγραφία (OpenTopoMap, CC-BY-SA). Φορτώνει και από αρχείο στον δίσκο. */
+	var TOPO = {
+		name: 'Ανάγλυφο',
+		url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+		attr: 'Δεδομένα &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, SRTM · Απόδοση &copy; <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)',
+		maxZoom: 17,
+		subdomains: 'abc'
+	};
 
 	function el(tag, attrs, kids) {
 		var n = document.createElement(tag);
@@ -170,17 +178,23 @@
 		// Χάρτης
 		var map = L.map(canvas, { scrollWheelZoom: !data.embed, zoomSnap: 0.5 }).setView([38.85, 22.5], 9);
 		this.map = map;
-		L.tileLayer(TILE, { maxZoom: 18, attribution: ATTR }).addTo(map);
+		var base = L.tileLayer(data.tiles || TILE, { maxZoom: 18, attribution: data.tilesAttr || ATTR, subdomains: data.tilesSub || 'abc' }).addTo(map);
+		var topo = L.tileLayer(TOPO.url, { maxZoom: TOPO.maxZoom, attribution: TOPO.attr, subdomains: TOPO.subdomains });
+		var layers = { 'Χάρτης': base };
+		layers[TOPO.name] = topo;
+		L.control.layers(layers, null, { position: 'topright', collapsed: false }).addTo(map);
 		L.control.scale({ imperial: false }).addTo(map);
 		this.routeLayer = L.layerGroup().addTo(map);
 		this.measureLayer = L.layerGroup().addTo(map);
 
-		if (data.school) {
-			L.marker([data.school.lat, data.school.lng], {
-				icon: L.divIcon({ className: 'sd-pin-wrap', html: '<span class="sd-school-pin" title="Το σχολείο μας">★</span>', iconSize: [30, 30], iconAnchor: [15, 15] }),
-				keyboard: false, zIndexOffset: 1000
-			}).bindTooltip('Το σχολείο μας').addTo(map);
+		// Αυτόνομο αρχείο: κάθε σχολείο ορίζει τη δική του θέση (μένει στον browser του).
+		if (data.standalone) {
+			try {
+				var saved = JSON.parse(localStorage.getItem('sd-map-school') || 'null');
+				if (saved && typeof saved.lat === 'number' && typeof saved.lng === 'number') { data.school = saved; }
+			} catch (e) { /* χωρίς αποθήκευση: απλώς χωρίς σχολείο */ }
 		}
+		if (data.school) { this.setSchool(data.school, false); }
 
 		data.places.forEach(function (p) {
 			var m = L.marker([p.lat, p.lng], { icon: icon(p), title: p.name, alt: p.name });
@@ -196,6 +210,9 @@
 			box.appendChild(el('button', { type: 'button', title: 'Προβολή στην τάξη (μεγάλα γράμματα)', text: 'Προβολή', onclick: function () { self.shell.classList.toggle('is-big'); setTimeout(function () { map.invalidateSize(); }, 200); } }));
 			box.appendChild(el('button', { type: 'button', title: 'Πλήρης οθόνη', text: '⛶', onclick: function () { self.fullscreen(); } }));
 			box.appendChild(el('button', { type: 'button', title: 'Μέτρηση απόστασης: κλικ σε δύο σημεία', text: 'Μέτρηση', onclick: function () { self.measure(); } }));
+			if (data.standalone) {
+				box.appendChild(el('button', { type: 'button', title: 'Ορίστε πού είναι το σχολείο σας: κλικ στον χάρτη', text: 'Σχολείο', onclick: function () { self.pickSchool(); } }));
+			}
 			if (data.embed && data.fullUrl) {
 				box.appendChild(el('a', { href: data.fullUrl, target: '_blank', rel: 'noopener', title: 'Άνοιγμα σε νέα καρτέλα', text: '↗' }));
 			}
@@ -224,6 +241,32 @@
 			if (location.hash.length > 1) { return; }
 			if (self.route) { self.fitRoute(); } else { self.fitVisible(); }
 		}, 400);
+	};
+
+	MapApp.prototype.setSchool = function (ll, save) {
+		this.data.school = { lat: ll.lat, lng: ll.lng };
+		if (this.schoolMarker) { this.map.removeLayer(this.schoolMarker); }
+		this.schoolMarker = L.marker([ll.lat, ll.lng], {
+			icon: L.divIcon({ className: 'sd-pin-wrap', html: '<span class="sd-school-pin" title="Το σχολείο μας">★</span>', iconSize: [30, 30], iconAnchor: [15, 15] }),
+			keyboard: false, zIndexOffset: 1000
+		}).bindTooltip('Το σχολείο μας').addTo(this.map);
+		if (save) {
+			try { localStorage.setItem('sd-map-school', JSON.stringify(this.data.school)); } catch (e) { /* δεν πειράζει */ }
+		}
+	};
+
+	MapApp.prototype.pickSchool = function () {
+		var self = this, map = this.map;
+		this.measureInfo.hidden = false;
+		this.measureInfo.textContent = 'Κάντε κλικ στη θέση του σχολείου σας.';
+		map.getContainer().style.cursor = 'crosshair';
+		map.once('click', function (e) {
+			self.setSchool(e.latlng, true);
+			map.getContainer().style.cursor = '';
+			self.measureInfo.textContent = 'Το σχολείο ορίστηκε. Οι αποστάσεις μετρούν από εκεί.';
+			setTimeout(function () { self.measureInfo.hidden = true; }, 2500);
+			self.refresh();
+		});
 	};
 
 	MapApp.prototype.fitRoute = function () {
