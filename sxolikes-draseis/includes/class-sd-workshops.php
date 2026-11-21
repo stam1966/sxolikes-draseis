@@ -357,6 +357,10 @@ class SD_Workshops {
 	public static function render() {
 		if ( isset( $_GET['print'] ) ) {
 			self::render_print( absint( $_GET['print'] ) );
+		} elseif ( isset( $_GET['sxedio'] ) ) {
+			SD_ErgPlan::render_class( absint( $_GET['sxedio'] ) );
+		} elseif ( isset( $_GET['sxolio'] ) ) {
+			SD_ErgPlan::render_school();
 		} elseif ( isset( $_GET['class'] ) ) {
 			self::render_form( absint( $_GET['class'] ) );
 		} else {
@@ -378,6 +382,9 @@ class SD_Workshops {
 			echo '<p>Δεν σας έχει αντιστοιχιστεί τμήμα.</p>';
 			return;
 		}
+		if ( current_user_can( SD_Roles::CAP_REVIEW ) ) {
+			echo '<p><a class="sd-button sd-small" href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxolio' => 1 ) ) ) . '">Σχέδιο Δράσης Σχολικής Μονάδας</a> <a class="sd-button sd-small" href="' . esc_url( SD_Exports::url( 'progall', 0 ) ) . '">Προγραμματισμός Εκπαιδευτικών, όλα τα τμήματα (Word)</a></p>';
+		}
 		echo '<table class="sd-table"><thead><tr><th>Τμήμα</th><th>Κατάσταση</th><th>Θεματικές</th><th>Εβδομάδες</th><th>Σύνδεση με ΣΔ</th><th></th></tr></thead><tbody>';
 		foreach ( $classes as $c ) {
 			$form   = self::form_of_class( $c->id );
@@ -394,7 +401,7 @@ class SD_Workshops {
 			}
 			echo '<tr><td><strong>' . esc_html( SD_Data::class_label( $c ) ) . '</strong></td><td>' . self::status_badge( $form ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
 			echo '<td>' . count( $cycles ) . ' / 4</td><td>' . (int) $weeks . '</td><td>' . (int) $links . ' / 4</td>';
-			echo '<td><a href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'class' => $c->id ) ) ) . '">Άνοιγμα</a></td></tr>';
+			echo '<td><a href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'class' => $c->id ) ) ) . '">Έντυπο 1Α</a> · <a href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxedio' => $c->id ) ) ) . '">Σχέδιο τμήματος</a> · <a href="' . esc_url( SD_Exports::url( 'prog', $c->id ) ) . '">Προγραμματισμός (Word)</a></td></tr>';
 		}
 		echo '</tbody></table>';
 	}

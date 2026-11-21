@@ -43,6 +43,71 @@ class SD_Citizen {
 		'alli'      => 'Άλλη Δράση Ενεργού Πολίτη',
 	);
 
+	/** Τα 6 ζητήματα ενεργού πολιτειότητας του Προτύπου Ανάπτυξης Δράσεων. */
+	const ZITIMATA = array(
+		'allileggyi' => 'Κοινωνική αλληλεγγύη – υποστήριξη ευπαθών ομάδων',
+		'synyparxi'  => 'Συνύπαρξη στην κοινότητα',
+		'diktyosi'   => 'Δικτύωση μέσα από συμμετοχικές δράσεις και πρωτοβουλίες παροχής βοήθειας σε δύσκολες καταστάσεις',
+		'poiotita'   => 'Προαγωγή ποιότητας ζωής του γενικού πληθυσμού (υγεία, εκπαίδευση, δικαιώματα)',
+		'perivallon' => 'Προστασία και ανάδειξη του φυσικού και πολιτιστικού περιβάλλοντος',
+		'filozoia'   => 'Φιλοζωία',
+	);
+
+	private static $programs = null;
+
+	/** Έτοιμα προγράμματα (ΚΕΠΕΑ και προτάσεις ΔΠΕ) από το data/programmata.json. */
+	public static function programs() {
+		if ( null === self::$programs ) {
+			$raw            = file_get_contents( SD_DIR . 'data/programmata.json' ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+			$j              = $raw ? json_decode( $raw, true ) : array();
+			self::$programs = array();
+			foreach ( $j['kepea'] ?? array() as $p ) {
+				$tags = array();
+				if ( ! empty( $p['istoria'] ) ) {
+					$tags[] = 'Τοπ. Ιστορία';
+				}
+				if ( ! empty( $p['geografia'] ) ) {
+					$tags[] = 'Τοπ. Γεωγραφία';
+				}
+				$p['label']                    = 'ΚΕΠΕΑ: ' . $p['title'] . ( $tags ? ' (' . implode( ', ', $tags ) . ')' : '' );
+				$p['group']                    = 'kepea';
+				self::$programs[ $p['id'] ] = $p;
+			}
+			foreach ( $j['dpe'] ?? array() as $p ) {
+				$p['label']                    = 'ΔΠΕ Φθιώτιδας – ' . $p['title'];
+				$p['group']                    = 'dpe';
+				self::$programs[ $p['id'] ] = $p;
+			}
+		}
+		return self::$programs;
+	}
+
+	/** Αριθμημένοι ΣΒΑ, όπως στο myschool: «3 Καλή Υγεία και Ευημερία, 4 Ποιοτική Εκπαίδευση». */
+	public static function sdg_text( $csv ) {
+		$out = array();
+		foreach ( '' === (string) $csv ? array() : explode( ',', $csv ) as $k ) {
+			if ( isset( self::SDGS[ (int) $k ] ) ) {
+				$out[ (int) $k ] = (int) $k . ' ' . self::SDGS[ (int) $k ];
+			}
+		}
+		ksort( $out );
+		return implode( ', ', $out );
+	}
+
+	/** Περίοδος υλοποίησης: το πεδίο, αλλιώς από το «Πότε» των φάσεων. */
+	public static function period_text( $dep ) {
+		if ( '' !== trim( (string) $dep->period ) ) {
+			return $dep->period;
+		}
+		$w = array();
+		foreach ( $dep->stage_arr as $s ) {
+			if ( '' !== trim( (string) ( $s['when'] ?? '' ) ) ) {
+				$w[] = trim( $s['when'] );
+			}
+		}
+		return implode( ' · ', array_unique( $w ) );
+	}
+
 	const SUBJECTS = array(
 		'ergastiria' => 'Εργαστήρια Δεξιοτήτων',
 		'mep'        => 'Μελέτη Περιβάλλοντος',
@@ -400,6 +465,15 @@ class SD_Citizen {
 			);
 		}
 		$kind = isset( $_POST['kind'] ) ? sanitize_key( wp_unslash( $_POST['kind'] ) ) : 'alli';
+		$prog = isset( $_POST['program'] ) ? sanitize_key( wp_unslash( $_POST['program'] ) ) : '';
+		$prog = self::programs()[ $prog ] ?? null;
+		if ( $prog && 'kepea' === $prog['group'] ) {
+			// Πρόγραμμα ΚΕΠΕΑ: σημειώνεται αυτόματα η συνεργασία.
+			$_POST['kepea'] = 1;
+			if ( '' === trim( (string) ( $_POST['kepea_note'] ?? '' ) ) ) {
+				$_POST['kepea_note'] = $prog['title'];
+			}
+		}
 		$unit = isset( $_POST['f1a_unit'] ) ? absint( $_POST['f1a_unit'] ) : 0;
 		$wpdb->update(
 			self::t(),
@@ -425,6 +499,9 @@ class SD_Citizen {
 				'diffusion'         => self::keys( 'diffusion', self::DIFFUSION ),
 				'diffusion_other'   => self::text( 'diffusion_other', false ),
 				'evidence'          => self::keys( 'evidence', self::EVIDENCE ),
+				'period'            => mb_substr( self::text( 'period', false ), 0, 100 ),
+				'zitima'            => isset( $_POST['zitima'] ) && isset( self::ZITIMATA[ $_POST['zitima'] ] ) ? sanitize_key( $_POST['zitima'] ) : '',
+				'program'           => isset( $_POST['program'] ) && isset( self::programs()[ $_POST['program'] ] ) ? sanitize_key( $_POST['program'] ) : '',
 				'ai_notes'          => self::text( 'ai_notes' ),
 				'updated_at'        => current_time( 'mysql' ),
 			),
@@ -551,7 +628,7 @@ class SD_Citizen {
 		$issues = self::issues( $dep, $class );
 		$ro     = $edit ? '' : ' disabled';
 
-		echo '<p><a href="' . esc_url( SD_Frontend::url( 'politis' ) ) . '">← Όλες οι δράσεις</a> · <a href="' . esc_url( SD_Frontend::url( 'politis', array( 'print' => $dep->id ) ) ) . '" target="_blank" rel="noopener">Εκτύπωση</a></p>';
+		echo '<p><a href="' . esc_url( SD_Frontend::url( 'politis' ) ) . '">← Όλες οι δράσεις</a> · <a href="' . esc_url( SD_Frontend::url( 'politis', array( 'print' => $dep->id ) ) ) . '" target="_blank" rel="noopener">Εκτύπωση</a> · <a href="' . esc_url( SD_Exports::url( 'f2', $dep->id ) ) . '">Word (Έντυπο 2)</a> · <a href="' . esc_url( SD_Exports::url( 'f2p', $dep->id ) ) . '">Word (Πρότυπο Ανάπτυξης Δράσης)</a></p>';
 		echo '<h2>Έντυπο 2 · ' . esc_html( SD_Data::class_label( $class ) ) . ': ' . esc_html( $dep->title ) . ' ' . self::badge( $dep->status ) . '</h2>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<p class="sd-meta">Ηλικιακό επίπεδο ΠΣ: ' . esc_html( self::age_group( $class->grade ) ) . '</p>';
 
@@ -588,12 +665,28 @@ class SD_Citizen {
 		echo '</div></fieldset>';
 		echo '<div class="sd-row"><label><input type="checkbox" name="kepea" value="1"' . checked( $dep->kepea, 1, false ) . $ro . '> Συνεργασία με ΚΕΠΕΑ / εγκεκριμένο πρόγραμμα</label>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<label class="sd-grow">Ποιο <input name="kepea_note" value="' . esc_attr( $dep->kepea_note ) . '"' . $ro . '></label></div>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		echo '<label class="sd-block">Έτοιμο πρόγραμμα (προαιρετικό): ΚΕΠΕΑ ή πρόταση της ΔΠΕ Φθιώτιδας <select name="program"' . $ro . '><option value="">—</option>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		foreach ( self::programs() as $k => $p ) {
+			echo '<option value="' . esc_attr( $k ) . '"' . selected( $dep->program, $k, false ) . '>' . esc_html( $p['label'] ) . '</option>';
+		}
+		echo '</select></label>';
+		$sel = self::programs()[ $dep->program ] ?? null;
+		if ( $sel && ! empty( $sel['url'] ) ) {
+			echo '<p class="sd-help">Υλικό: <a href="' . esc_url( $sel['url'] ) . '" target="_blank" rel="noopener">' . esc_html( $sel['title'] ) . '</a></p>';
+		}
+		echo '<p class="sd-help">Με πρόγραμμα ΚΕΠΕΑ σημειώνεται αυτόματα η συνεργασία. Τα προγράμματα με «Τοπ. Ιστορία / Τοπ. Γεωγραφία» μετρούν για την υποχρεωτική δράση, αν οι ώρες δοθούν στο αντίστοιχο μάθημα.</p>';
+		echo '<label class="sd-block">Περίοδος υλοποίησης <input name="period" maxlength="100" value="' . esc_attr( $dep->period ) . '" placeholder="π.χ. Φεβρουάριος – Απρίλιος 2027"' . $ro . '></label>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<label class="sd-block">Συνεργαζόμενοι/ες εκπαιδευτικοί, τάξεις ή σχολεία<textarea name="partners" rows="2"' . $ro . '>' . esc_textarea( $dep->partners ) . '</textarea></label></section>'; // phpcs:ignore WordPress.Security.EscapeOutput
 
 		/* Β. ΣΒΑ */
 		echo '<section class="sd-card"><h3>Β. Θεματικό πεδίο του Προγράμματος Σπουδών (ΣΒΑ)</h3><p class="sd-help">Ένα ή περισσότερα. Καταχωρίζεται στο myschool στο τέλος της χρονιάς.</p>';
 		echo $edit ? '' : '<fieldset disabled>';
 		self::checks( 'sdgs', self::SDGS, $dep->sdgs );
+		echo '<p><strong>Ζήτημα ενεργού πολιτειότητας</strong> (ένα, για το Πρότυπο Ανάπτυξης Δράσεων)</p><div class="sd-checks">';
+		foreach ( self::ZITIMATA as $k => $l ) {
+			echo '<label><input type="radio" name="zitima" value="' . esc_attr( $k ) . '"' . checked( $dep->zitima, $k, false ) . '> ' . esc_html( $l ) . '</label>';
+		}
+		echo '</div>';
 		echo $edit ? '' : '</fieldset>';
 		echo '</section>';
 
@@ -798,6 +891,48 @@ class SD_Citizen {
 			array( 'p', 'Ημερομηνία υποβολής: ' . ( $dep->submitted_at ? mysql2date( 'd/m/Y', $dep->submitted_at ) : '…… / …… / 20……' ) ),
 			array( 'p', 'Ο/Η εκπαιδευτικός (ονοματεπώνυμο – υπογραφή):' ),
 		);
+	}
+
+	/** Μπλοκ για Word στη μορφή του «Προτύπου Ανάπτυξης Δράσεων Ενίσχυσης της Ενεργού Πολιτειότητας». */
+	public static function proto_blocks( $dep ) {
+		$class  = SD_Data::get_class( $dep->class_id );
+		$lessons = array();
+		foreach ( $dep->hours_arr as $r ) {
+			$lessons[] = ( self::SUBJECTS[ $r['subject'] ] ?? '' ) . ( '' !== (string) ( $r['unit'] ?? '' ) ? ' – ' . $r['unit'] : '' ) . ' (' . (int) ( $r['hours'] ?? 0 ) . ' ώρ.' . ( '' !== (string) ( $r['period'] ?? '' ) ? ', ' . $r['period'] : '' ) . ')';
+		}
+		if ( $dep->f1a_unit && $class ) {
+			$u = SD_Workshops::units( SD_Workshops::form_of_class( $class->id ) )[ (int) $dep->f1a_unit ] ?? null;
+			if ( $u && $u->cycle ) {
+				$lessons[] = 'Εργαστήρια Δεξιοτήτων: ' . SD_Workshops::CYCLES[ $u->cycle ] . ' – ' . SD_Workshops::subtheme( $class->grade, $u->cycle ) . ( $u->title ? ' («' . $u->title . '»)' : '' ) . ' · ' . SD_Workshops::UNITS[ (int) $dep->f1a_unit ];
+			}
+		}
+		$b = array(
+			array( 'p', SD_Frontend::school_name() . ' · Τάξη ' . ( $class ? SD_Data::class_label( $class ) : '' ), true ),
+			array( 'title', 'Πρότυπο Ανάπτυξης Δράσεων Ενίσχυσης της Ενεργού Πολιτειότητας' ),
+			array(
+				'kv',
+				array(
+					array( '1. Τίτλος Δράσης', $dep->title ),
+					array( '2. Επίπεδο', $class ? self::age_group( $class->grade ) : '' ),
+					array( '3. Θεματικό Πεδίο', 'Θεματικά πεδία ΠΣ (ΣΒΑ): ' . self::sdg_text( $dep->sdgs ) . "\nΖήτημα ενεργού πολιτειότητας: " . ( self::ZITIMATA[ $dep->zitima ] ?? '' ) ),
+					array( '4. Σύντομη περιγραφή της Δράσης', $dep->description ),
+					array( '5. Μάθημα ή τομέας του Εργαστηρίου Δεξιοτήτων που εντάσσεται', implode( "\n", $lessons ) ),
+					array( '6. Προσδοκώμενα Μαθησιακά Αποτελέσματα', $dep->outcomes ),
+					array( '7. Πεδίο Υλοποίησης', implode( ', ', self::labels( $dep->places, self::PLACES ) ) ),
+				),
+			),
+			array( 'h', '8. Φάσεις Υλοποίησης' ),
+		);
+		$n    = 0;
+		$rows = array();
+		foreach ( self::STAGES as $k => $l ) {
+			$n++;
+			$s      = $dep->stage_arr[ $k ] ?? array();
+			$name   = preg_replace( '/^\d+\.\s*/u', '', $l );
+			$rows[] = array( '8.' . $n . '. ' . $name . ' (' . (int) ( $s['hours'] ?? 0 ) . ' διδ. ώρες)', (string) ( $s['activities'] ?? '' ) . ( '' !== (string) ( $s['when'] ?? '' ) ? "\nΠότε: " . $s['when'] : '' ) );
+		}
+		$b[] = array( 'kv', $rows );
+		return $b;
 	}
 
 	/** Για την αρχική: δράσεις των τμημάτων του χρήστη. */

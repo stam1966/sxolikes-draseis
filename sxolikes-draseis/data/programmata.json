@@ -1,0 +1,20 @@
+{
+  "year": "2026-2027",
+  "note": "Από τον κατάλογο της ΔΠΕ Φθιώτιδας (Σύμβουλος Εκπαίδευσης ΠΕ70), Σεπτέμβριος 2026. istoria/geografia/politis/ergastiria: σε τι μπορεί να αξιοποιηθεί το πρόγραμμα. axes: άξονες εσωτερικής αξιολόγησης (1 = Διδασκαλία, μάθηση και αξιολόγηση, 3 = Σχέσεις μεταξύ μαθητών/τριών, 4 = Σχέσεις μαθητών/τριών και εκπαιδευτικών).",
+  "kepea": [
+    { "id": "kepea-1", "title": "Κλιματικές αλλαγές – ακραία καιρικά φαινόμενα", "istoria": false, "geografia": false, "politis": true, "ergastiria": true, "axes": [1, 3, 4] },
+    { "id": "kepea-2", "title": "Γεωμυθολογικά – γεωπεριβαλλοντικά μονοπάτια", "istoria": true, "geografia": true, "politis": true, "ergastiria": true, "axes": [1, 3, 4] },
+    { "id": "kepea-3", "title": "Το δασικό περιβάλλον της Οίτης", "istoria": false, "geografia": true, "politis": true, "ergastiria": true, "axes": [1, 3, 4] },
+    { "id": "kepea-4", "title": "Του ποταμού το πρόσωπο", "istoria": false, "geografia": true, "politis": true, "ergastiria": true, "axes": [1, 3, 4] },
+    { "id": "kepea-5", "title": "Περιβαλλοντικές διαδρομές στα ιαματικά νερά της Φθιώτιδας", "istoria": true, "geografia": true, "politis": true, "ergastiria": true, "axes": [1, 3, 4] },
+    { "id": "kepea-6", "title": "Πράσινες περι-αστικές αποστολές", "istoria": false, "geografia": true, "politis": true, "ergastiria": true, "axes": [1, 3, 4] },
+    { "id": "kepea-7", "title": "Μαλιακός, ένας ξεχωριστός θαλασσότοπος", "istoria": true, "geografia": true, "politis": true, "ergastiria": true, "axes": [1, 3, 4] },
+    { "id": "kepea-8", "title": "Ελιά, το δώρο των Θεών", "istoria": false, "geografia": true, "politis": true, "ergastiria": true, "axes": [1, 3, 4] },
+    { "id": "kepea-9", "title": "Ξεριάς Λαμίας (ο Αχελώος των αρχαίων), ένας θεός που πληγώνουμε…", "istoria": true, "geografia": true, "politis": true, "ergastiria": true, "axes": [1, 3, 4], "local": true },
+    { "id": "kepea-10", "title": "Η ζωή στον Αλμυροπόταμο", "istoria": false, "geografia": true, "politis": true, "ergastiria": true, "axes": [1, 3, 4], "local": true }
+  ],
+  "dpe": [
+    { "id": "dpe-geo", "title": "Τοπική Γεωγραφία: Φυσικός πολύ-οδηγός της Φθιώτιδας", "kind": "geografia", "url": "https://act.digitalschool.gov.gr/hist_geog_les/fysikos-poly-odigos-tis-fthiotidas/" },
+    { "id": "dpe-ist", "title": "Τοπική Ιστορία: Ιστορικές ιχνηλατήσεις στη Φθιώτιδα", "kind": "istoria", "url": "https://act.digitalschool.gov.gr/hist_geog_les/istorikes-ichnilatiseis-sti-fthiotida/" }
+  ]
+}

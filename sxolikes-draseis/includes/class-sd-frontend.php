@@ -25,6 +25,7 @@ class SD_Frontend {
 			'apotimisi'  => array( 'Αποτίμηση (4)', SD_Roles::CAP_ACCESS ),
 			'xartis'     => array( 'Χάρτης τόπου', SD_Roles::CAP_ACCESS ),
 			'taxeis' => array( 'Τμήματα', SD_Roles::CAP_MANAGE ),
+			'xristes' => array( 'Χρήστες', SD_Roles::CAP_MANAGE ),
 			'etos'   => array( 'Σχολικό έτος', SD_Roles::CAP_MANAGE ),
 			'exagoges'   => array( 'Εξαγωγές', SD_Roles::CAP_REVIEW ),
 			'rythmiseis' => array( 'Ρυθμίσεις', SD_Roles::CAP_MANAGE ),
@@ -99,7 +100,7 @@ class SD_Frontend {
 		$result = true;
 
 		$plans = SD_Plans::handle( $do );
-		foreach ( array( 'SD_Workshops', 'SD_Citizen', 'SD_Settings', 'SD_Map', 'SD_Requests', 'SD_F4' ) as $module ) {
+		foreach ( array( 'SD_Workshops', 'SD_Citizen', 'SD_Settings', 'SD_Map', 'SD_Requests', 'SD_F4', 'SD_Users', 'SD_ErgPlan' ) as $module ) {
 			if ( null === $plans ) {
 				$plans = $module::handle( $do );
 			}
@@ -169,7 +170,8 @@ class SD_Frontend {
 
 		if ( is_wp_error( $result ) ) {
 			set_transient( 'sd_msg_' . get_current_user_id(), array( 'error', $result->get_error_message() ), 60 );
-		} else {
+		} elseif ( ! get_transient( 'sd_msg_' . get_current_user_id() ) ) {
+			// Μια ενότητα μπορεί να έχει ήδη γράψει πιο συγκεκριμένο μήνυμα.
 			set_transient( 'sd_msg_' . get_current_user_id(), array( 'ok', 'Αποθηκεύτηκε.' ), 60 );
 		}
 		wp_safe_redirect( $back );
@@ -230,6 +232,9 @@ class SD_Frontend {
 				break;
 			case 'exagoges':
 				SD_Exports::render();
+				break;
+			case 'xristes':
+				SD_Users::render();
 				break;
 			default:
 				self::screen_home();

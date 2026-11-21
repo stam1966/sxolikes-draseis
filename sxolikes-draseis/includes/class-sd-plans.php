@@ -155,7 +155,16 @@ class SD_Plans {
 			$out[] = array( 'error', 'Λείπει ο σκοπός.' );
 		}
 		if ( '' === trim( $plan->need ) ) {
-			$out[] = array( 'error', 'Λείπει η αρχική ανάγκη.' );
+			$out[] = array( 'error', 'Λείπει η τεκμηρίωση της αναγκαιότητας.' );
+		}
+		if ( SD_Eval::length( $plan->purpose ) > SD_Eval::PURPOSE_LIMIT ) {
+			$out[] = array( 'error', 'Ο σκοπός ξεπερνά τους ' . SD_Eval::PURPOSE_LIMIT . ' χαρακτήρες.' );
+		}
+		if ( SD_Eval::length( $plan->need ) > SD_Eval::PURPOSE_LIMIT ) {
+			$out[] = array( 'error', 'Η τεκμηρίωση αναγκαιότητας ξεπερνά τους ' . SD_Eval::PURPOSE_LIMIT . ' χαρακτήρες.' );
+		}
+		if ( '' === (string) $plan->sources ) {
+			$out[] = array( 'warning', 'Δεν έχουν σημειωθεί πηγές τεκμηρίωσης.' );
 		}
 		if ( ! $goals ) {
 			$out[] = array( 'error', 'Χρειάζεται τουλάχιστον ένας στόχος.' );
@@ -340,8 +349,8 @@ class SD_Plans {
 
 			case 'save_plan':
 				$title   = self::post_text( 'title', 255, 'Τίτλος', false );
-				$purpose = self::post_text( 'purpose', 0, 'Σκοπός' );
-				$need    = self::post_text( 'need', 0, 'Αρχική ανάγκη' );
+				$purpose = self::post_text( 'purpose', SD_Eval::PURPOSE_LIMIT, 'Σκοπός' );
+				$need    = self::post_text( 'need', SD_Eval::PURPOSE_LIMIT, 'Τεκμηρίωση αναγκαιότητας' );
 				$err     = self::first_error( array( $title, $purpose, $need ) );
 				if ( $err ) {
 					return array( $err, $back );
@@ -354,9 +363,14 @@ class SD_Plans {
 						'title'      => $title,
 						'axis'       => isset( SD_Eval::AXES[ $axis ] ) ? $axis : (int) $plan->axis,
 						'indicators' => self::post_keys( 'indicators', SD_Eval::indicators_of( $axis ) ),
-						'purpose'    => $purpose,
-						'need'       => $need,
-						'updated_at' => current_time( 'mysql' ),
+						'purpose'      => $purpose,
+						'need'         => $need,
+						'sources'      => self::post_keys( 'sources', SD_Eval::SOURCES ),
+						'praxi'        => isset( $_POST['praxi'] ) ? mb_substr( sanitize_text_field( wp_unslash( $_POST['praxi'] ) ), 0, 60 ) : '',
+						'continuation' => isset( $_POST['continuation'] ) && isset( SD_Eval::YES_NO[ $_POST['continuation'] ] ) ? sanitize_key( $_POST['continuation'] ) : '',
+						'collab'       => isset( $_POST['collab'] ) && isset( SD_Eval::YES_NO[ $_POST['collab'] ] ) ? sanitize_key( $_POST['collab'] ) : '',
+						'collab_note'  => isset( $_POST['collab_note'] ) ? mb_substr( sanitize_text_field( wp_unslash( $_POST['collab_note'] ) ), 0, 255 ) : '',
+						'updated_at'   => current_time( 'mysql' ),
 					),
 					array( 'id' => $plan->id )
 				);
@@ -587,7 +601,7 @@ class SD_Plans {
 		$edit  = self::can_edit( $plan );
 		$goals = self::goals( $plan->id );
 
-		echo '<p><a href="' . esc_url( SD_Frontend::url( 'sxedia' ) ) . '">← Όλα τα σχέδια</a> · <a href="' . esc_url( SD_Frontend::url( 'sxedia', array( 'copy' => $plan->id ) ) ) . '">Κείμενα για την πλατφόρμα</a></p>';
+		echo '<p><a href="' . esc_url( SD_Frontend::url( 'sxedia' ) ) . '">← Όλα τα σχέδια</a> · <a href="' . esc_url( SD_Frontend::url( 'sxedia', array( 'copy' => $plan->id ) ) ) . '">Κείμενα για την πλατφόρμα</a> · <a href="' . esc_url( SD_Exports::url( 'plan', $plan->id ) ) . '">Λήψη σε Word</a></p>';
 		echo '<h2>' . esc_html( trim( $plan->code . ' ' . $plan->title ) ) . '</h2>';
 		echo '<p class="sd-meta">' . esc_html( SD_Eval::function_label( $plan->axis ) ) . ' · Άξονας ' . (int) $plan->axis . ': ' . esc_html( SD_Eval::axis_label( $plan->axis ) ) . '</p>';
 
@@ -618,14 +632,27 @@ class SD_Plans {
 			echo '<fieldset class="sd-sub"><legend>Δείκτες του άξονα (ενδεικτικοί, προαιρετικοί)</legend>';
 			self::checks( 'indicators', SD_Eval::indicators_of( $plan->axis ), $plan->indicators );
 			echo '<p class="sd-help">Αν αλλάξετε άξονα, αποθηκεύστε και μετά διαλέξτε δείκτες.</p></fieldset>';
-			echo '<label class="sd-block">Σκοπός / Βασική κατεύθυνση';
-			self::textarea( 'purpose', $plan->purpose, 0, 5 );
-			echo '</label><label class="sd-block">Αρχική ανάγκη';
-			self::textarea( 'need', $plan->need, 0, 5 );
-			echo '</label><p><button class="sd-button" type="submit">Αποθήκευση στοιχείων</button></p></form></section>';
+			echo '<label class="sd-block">Σκοπός';
+			self::textarea( 'purpose', $plan->purpose, SD_Eval::PURPOSE_LIMIT, 5 );
+			echo '</label><label class="sd-block">Τεκμηρίωση αναγκαιότητας';
+			self::textarea( 'need', $plan->need, SD_Eval::PURPOSE_LIMIT, 5 );
+			echo '</label><fieldset class="sd-sub"><legend>Πηγές τεκμηρίωσης</legend>';
+			self::checks( 'sources', SD_Eval::SOURCES, $plan->sources );
+			echo '</fieldset><div class="sd-row"><label>Πράξη Συλλόγου Διδασκόντων <input name="praxi" size="18" value="' . esc_attr( $plan->praxi ) . '" placeholder="π.χ. 12/20-10-2026"></label>';
+			foreach ( array( 'continuation' => 'Συνέχεια προηγούμενου σχεδίου', 'collab' => 'Συνεργασία με άλλο σχολείο' ) as $f => $l ) {
+				echo '<label>' . esc_html( $l ) . ' <select name="' . esc_attr( $f ) . '"><option value="">—</option>';
+				foreach ( SD_Eval::YES_NO as $k => $v ) {
+					echo '<option value="' . esc_attr( $k ) . '"' . selected( $plan->$f, $k, false ) . '>' . esc_html( $v ) . '</option>';
+				}
+				echo '</select></label>';
+			}
+			echo '</div><label class="sd-block">Με ποιο σχολείο (αν υπάρχει συνεργασία) <input name="collab_note" value="' . esc_attr( $plan->collab_note ) . '"></label>';
+			echo '<p><button class="sd-button" type="submit">Αποθήκευση στοιχείων</button></p></form></section>';
 		} else {
-			echo '<section class="sd-card"><h3>Σκοπός / Βασική κατεύθυνση</h3><p>' . nl2br( esc_html( $plan->purpose ? $plan->purpose : '—' ) ) . '</p>';
-			echo '<h3>Αρχική ανάγκη</h3><p>' . nl2br( esc_html( $plan->need ? $plan->need : '—' ) ) . '</p>';
+			echo '<section class="sd-card"><h3>Σκοπός</h3><p>' . nl2br( esc_html( $plan->purpose ? $plan->purpose : '—' ) ) . '</p>';
+			echo '<h3>Τεκμηρίωση αναγκαιότητας</h3><p>' . nl2br( esc_html( $plan->need ? $plan->need : '—' ) ) . '</p>';
+			$src = self::labels( $plan->sources, SD_Eval::SOURCES, '' );
+			echo '<p class="sd-meta">Πηγές τεκμηρίωσης: ' . esc_html( $src ? implode( ' · ', $src ) : '—' ) . '<br>Πράξη Συλλόγου: ' . esc_html( $plan->praxi ? $plan->praxi : '—' ) . ' · Συνέχεια προηγούμενου: ' . esc_html( SD_Eval::YES_NO[ $plan->continuation ] ?? '—' ) . ' · Συνεργασία με άλλο σχολείο: ' . esc_html( ( SD_Eval::YES_NO[ $plan->collab ] ?? '—' ) . ( $plan->collab_note ? ' (' . $plan->collab_note . ')' : '' ) ) . '</p>';
 			if ( $ind ) {
 				echo '<h3>Δείκτες</h3><ul>';
 				foreach ( $ind as $i ) {
@@ -765,6 +792,90 @@ class SD_Plans {
 		echo '</section>';
 	}
 
+	private static function boxes( array $options, $csv, $other = '' ) {
+		$sel = '' === (string) $csv ? array() : explode( ',', $csv );
+		$out = array();
+		foreach ( $options as $k => $l ) {
+			$out[] = ( in_array( (string) $k, $sel, true ) ? '☒ ' : '☐ ' ) . $l;
+		}
+		$out[] = 'Άλλο: ' . $other;
+		return implode( "\n", $out );
+	}
+
+	/** Μπλοκ για Word: «Δομικά στοιχεία» και «Στοχοθεσία», όπως στα πρότυπα του σχολείου. */
+	public static function doc_blocks( $plan ) {
+		$year  = null;
+		foreach ( SD_Data::years() as $y ) {
+			if ( (int) $y->id === (int) $plan->year_id ) {
+				$year = $y;
+			}
+		}
+		$names = array();
+		foreach ( self::members( $plan->id ) as $m ) {
+			$names[] = self::user_name( $m );
+		}
+		$src = array();
+		$sel = '' === (string) $plan->sources ? array() : explode( ',', $plan->sources );
+		foreach ( SD_Eval::SOURCES as $k => $l ) {
+			$src[] = ( in_array( $k, $sel, true ) ? '☒ ' : '☐ ' ) . $l;
+		}
+		$b = array(
+			array( 'p', SD_Frontend::school_name(), true ),
+			array( 'title', 'Σχέδιο Δράσης ' . trim( $plan->code . ' «' . $plan->title . '»' ) ),
+			array( 'p', 'Εσωτερική αξιολόγηση της σχολικής μονάδας · Σχολικό έτος ' . ( $year ? $year->label : '' ) ),
+			array( 'h', 'Δομικά στοιχεία' ),
+			array(
+				'kv',
+				array(
+					array( 'Τίτλος σχεδίου', $plan->title ),
+					array( 'Λειτουργία', SD_Eval::function_label( $plan->axis ) ),
+					array( 'Άξονας', SD_Eval::axis_label( $plan->axis ) ),
+					array( 'Σκοπός (500 χαρ.)', $plan->purpose ),
+					array( 'Τεκμηρίωση αναγκαιότητας (500 χαρ.)', $plan->need ),
+					array( 'Πηγές τεκμηρίωσης', implode( "\n", $src ) ),
+					array( 'Πράξη Συλλόγου Διδασκόντων', $plan->praxi ),
+					array( 'Συνέχεια προηγούμενου σχεδίου δράσης', SD_Eval::YES_NO[ $plan->continuation ] ?? '' ),
+					array( 'Συνεργασία με άλλο σχολείο', ( SD_Eval::YES_NO[ $plan->collab ] ?? '' ) . ( $plan->collab_note ? ': ' . $plan->collab_note : '' ) ),
+					array( 'Ομάδα Δράσης', 'Συντονιστής/τρια: ' . ( $plan->coordinator_id ? self::user_name( $plan->coordinator_id ) : '' ) . "\nΜέλη: " . implode( ', ', $names ) ),
+				),
+			),
+			array( 'h', 'Στοχοθεσία' ),
+			array( 'p', 'Κάθε σχέδιο δράσης περιλαμβάνει έως 3 στόχους. Κάθε στόχος περιλαμβάνει 1–2 ενέργειες υλοποίησης και 1 ενέργεια αποτίμησης.' ),
+		);
+		foreach ( self::goals( $plan->id ) as $i => $g ) {
+			$rows     = array( array( 'Περιγραφή στόχου', $g->description ) );
+			$impl     = array();
+			$eval     = array();
+			$criteria = array();
+			foreach ( self::actions( $g->id ) as $a ) {
+				if ( 'apotimisi' === $a->kind ) {
+					$eval[] = $a;
+					if ( '' !== trim( $a->criterion ) ) {
+						$criteria[] = $a->criterion;
+					}
+				} else {
+					$impl[] = $a;
+				}
+			}
+			$rows[] = array( 'Ενέργειες υλοποίησης', '' );
+			foreach ( $impl as $k => $a ) {
+				$rows[] = array( 'Περιγραφή ενέργειας ' . ( $k + 1 ), $a->description );
+				$rows[] = array( 'Ημερομηνία έναρξης – λήξης', self::fmt_date( $a->start_date ) . ' – ' . self::fmt_date( $a->end_date ) );
+			}
+			$rows[] = array( 'Ενέργειες αποτίμησης', '' );
+			foreach ( $eval as $k => $a ) {
+				$rows[] = array( 'Περιγραφή ενέργειας ' . ( $k + 1 ), $a->description );
+				$rows[] = array( 'Ημερομηνία έναρξης – λήξης', self::fmt_date( $a->start_date ) . ' – ' . self::fmt_date( $a->end_date ) );
+			}
+			$rows[] = array( 'Κριτήρια επιτυχίας', implode( "\n", $criteria ) );
+			$rows[] = array( 'Εργαλεία', self::boxes( SD_Eval::TOOLS, $g->tools, $g->tools_other ) );
+			$rows[] = array( 'Τρόπος δουλειάς', self::boxes( SD_Eval::WAYS, $g->ways, $g->ways_other ) );
+			$b[]    = array( 'h', 'Στόχος ' . ( $i + 1 ) . ( $g->title ? ': ' . $g->title : '' ) );
+			$b[]    = array( 'kv', $rows );
+		}
+		return $b;
+	}
+
 	/** Τα κείμενα του σχεδίου, έτοιμα για αντιγραφή στην πλατφόρμα του ΙΕΠ. */
 	private static function render_copy( $plan_id ) {
 		$plan = self::get_plan( $plan_id );
@@ -777,8 +888,8 @@ class SD_Plans {
 		echo '<p class="sd-help">Πατήστε «Αντιγραφή» και επικολλήστε στο αντίστοιχο πεδίο της πλατφόρμας. Η εφαρμογή δεν υποβάλλει τίποτα μόνη της.</p>';
 		$fields = array(
 			'Τίτλος'          => $plan->title,
-			'Σκοπός'          => $plan->purpose,
-			'Αρχική ανάγκη'   => $plan->need,
+			'Σκοπός'                   => $plan->purpose,
+			'Τεκμηρίωση αναγκαιότητας' => $plan->need,
 		);
 		foreach ( self::goals( $plan->id ) as $i => $g ) {
 			$n = 'Στόχος ' . ( $i + 1 );
