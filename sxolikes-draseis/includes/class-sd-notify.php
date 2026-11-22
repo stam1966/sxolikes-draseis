@@ -6,8 +6,8 @@
  * - Ό,τι υποβάλλει μέλος της Επιτροπής ή της Διεύθυνσης το ελέγχει η Διεύθυνση.
  * - Email σε όσους μπορούν να ελέγξουν, όταν υποβάλλεται κάτι.
  * - Email στον/στην εκπαιδευτικό, όταν το έντυπο ελέγχεται ή επιστρέφεται.
- * - Μία φορά την ημέρα: υπενθυμίσεις για προθεσμίες που πλησιάζουν, για ενέργειες
- *   Σχεδίων Δράσης που ξεκινούν ή λήγουν, και σύνοψη όσων περιμένουν έλεγχο.
+ * - Υπενθυμίσεις μόνο στις ορισμένες ημέρες πριν από προθεσμία ή ενέργεια Σχεδίου Δράσης
+ *   (προεπιλογή 7 και 2)· προαιρετική εβδομαδιαία σύνοψη ελέγχου τη Δευτέρα.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -31,13 +31,23 @@ class SD_Notify {
 
 	public static function cfg() {
 		$v = get_option( self::OPT, array() );
+		// Μία φορά: ρυθμίσεις αποθηκευμένες με τις παλιές προεπιλογές (0.13.0) → μόνο 7 και 2 ημέρες, χωρίς σύνοψη.
+		if ( is_array( $v ) && $v && empty( $v['v2'] ) ) {
+			if ( isset( $v['days'] ) && '7,2,0' === $v['days'] ) {
+				$v['days']   = '7,2';
+				$v['digest'] = 0;
+			}
+			$v['v2'] = 1;
+			update_option( self::OPT, $v, false );
+		}
 		return array_merge(
 			array(
 				'submit'    => 1,
 				'decision'  => 1,
 				'reminders' => 1,
-				'digest'    => 1,
-				'days'      => '7,2,0',
+				'weekly'    => 1, // εβδομαδιαία αναφορά στη Διεύθυνση, κάθε Δευτέρα
+				'digest'    => 0, // σύνοψη ελέγχου: κλειστή· αν ανοίξει, μόνο τη Δευτέρα
+				'days'      => '7,2',
 			),
 			is_array( $v ) ? $v : array()
 		);
@@ -50,7 +60,7 @@ class SD_Notify {
 				$out[] = max( 0, min( 60, (int) trim( $d ) ) );
 			}
 		}
-		return $out ? array_unique( $out ) : array( 7, 2, 0 );
+		return $out ? array_unique( $out ) : array( 7, 2 );
 	}
 
 	/* =================== Ποιος ελέγχει =================== */
@@ -236,8 +246,8 @@ class SD_Notify {
 					continue;
 				}
 				$left = (int) round( ( strtotime( $s['deadline'] ) - $today ) / DAY_IN_SECONDS );
-				if ( in_array( $left, $days, true ) || -1 === $left ) {
-					$when  = $left > 1 ? 'σε ' . $left . ' ημέρες' : ( 1 === $left ? 'αύριο' : ( 0 === $left ? 'σήμερα' : 'έληξε χθες' ) );
+				if ( in_array( $left, $days, true ) ) {
+					$when  = $left > 1 ? 'σε ' . $left . ' ημέρες' : ( 1 === $left ? 'αύριο' : 'σήμερα' );
 					$out[] = '• Τμήμα ' . SD_Data::class_label( $c ) . ' – ' . $s['title'] . ': προθεσμία ' . mysql2date( 'd/m/Y', $s['deadline'] ) . ' (' . $when . ')' . ( 'fix' === $s['state'] ? ', έχει επιστραφεί για διόρθωση' : '' ) . "\n  " . $s['url'];
 				}
 			}
@@ -264,6 +274,123 @@ class SD_Notify {
 		return $out;
 	}
 
+	/** Εβδομαδιαία αναφορά για τη Διεύθυνση: τι εκκρεμεί, τι ολοκληρώθηκε, τι αναμένεται. */
+	public static function weekly_report( $user_id ) {
+		global $wpdb;
+		$year = SD_Data::active_year();
+		if ( ! $year ) {
+			return array();
+		}
+		$today = current_time( 'Y-m-d' );
+		$from  = gmdate( 'Y-m-d', strtotime( $today . ' -7 days' ) );
+		$to    = gmdate( 'Y-m-d', strtotime( $today . ' +14 days' ) );
+		$L     = array( 'Εβδομαδιαία εικόνα των Σχολικών Δράσεων · ' . $year->label, '' );
+
+		// 1. Τι εκκρεμεί.
+		$pend = self::pending_for_user( $user_id );
+		$late = array();
+		foreach ( SD_Data::classes( $year->id ) as $c ) {
+			foreach ( SD_Timeline::class_steps( $c ) as $s ) {
+				if ( 'late' === $s['state'] ) {
+					$late[] = '• Τμήμα ' . SD_Data::class_label( $c ) . ' – ' . $s['title'] . ' (προθεσμία ' . mysql2date( 'd/m/Y', $s['deadline'] ) . ')';
+				}
+			}
+		}
+		$L[] = '1. ΤΙ ΕΚΚΡΕΜΕΙ';
+		if ( ! $pend && ! $late ) {
+			$L[] = 'Τίποτα. Δεν υπάρχει κάτι για έλεγχο ούτε κάτι εκπρόθεσμο.';
+		}
+		if ( $pend ) {
+			$L[] = 'Για έλεγχο:';
+			foreach ( $pend as $x ) {
+				$L[] = '• ' . $x[0] . ' – ' . $x[1];
+			}
+		}
+		if ( $late ) {
+			$L[] = 'Εκπρόθεσμα:';
+			$L   = array_merge( $L, $late );
+		}
+
+		// 2. Τι ολοκληρώθηκε τις τελευταίες 7 ημέρες.
+		$done = array();
+		$q    = function ( $table, $col, $status = '' ) use ( $wpdb, $year, $from ) {
+			$sql = 'SELECT * FROM ' . SD_Data::table( $table ) . " WHERE year_id = %d AND $col >= %s" . ( $status ? ' AND status = %s' : '' );
+			return $status ? $wpdb->get_results( $wpdb->prepare( $sql, $year->id, $from, $status ) ) : $wpdb->get_results( $wpdb->prepare( $sql, $year->id, $from ) );
+		};
+		$cl = function ( $id ) {
+			$c = SD_Data::get_class( $id );
+			return $c ? 'τμήμα ' . SD_Data::class_label( $c ) : '';
+		};
+		foreach ( array( 'f1a' => 'Έντυπο 1Α', 'f4' => 'Έντυπο 4' ) as $t => $label ) {
+			foreach ( $q( $t, 'submitted_at' ) as $r ) {
+				$done[] = '• Υποβλήθηκε ' . $label . ' – ' . $cl( $r->class_id );
+			}
+			foreach ( $q( $t, 'reviewed_at', 'elegxthike' ) as $r ) {
+				$done[] = '• Ελέγχθηκε ' . $label . ' – ' . $cl( $r->class_id );
+			}
+		}
+		foreach ( $q( 'citizen', 'submitted_at' ) as $r ) {
+			$done[] = '• Υποβλήθηκε Έντυπο 2 «' . $r->title . '» – ' . $cl( $r->class_id );
+		}
+		foreach ( $q( 'citizen', 'reviewed_at', 'elegxthike' ) as $r ) {
+			$done[] = '• Ελέγχθηκε Έντυπο 2 «' . $r->title . '» – ' . $cl( $r->class_id );
+		}
+		foreach ( $q( 'requests', 'reviewed_at', 'egkrithike' ) as $r ) {
+			$done[] = '• Εγκρίθηκε επίσκεψη/φορέας (Έντυπο 3) – ' . $cl( $r->class_id ) . ( $r->event_date ? ', ' . mysql2date( 'd/m/Y', $r->event_date ) : '' );
+		}
+		foreach ( $q( 'ergplan', 'updated_at' ) as $r ) {
+			$done[] = '• Ενημερώθηκε Σχέδιο Δράσης Τμήματος – ' . $cl( $r->class_id );
+		}
+		foreach ( $q( 'places', 'reviewed_at', 'dimosieftike' ) as $r ) {
+			$done[] = '• Δημοσιεύτηκε σημείο χάρτη «' . $r->name . '»';
+		}
+		$L[] = '';
+		$L[] = '2. ΤΙ ΟΛΟΚΛΗΡΩΘΗΚΕ (τελευταίες 7 ημέρες)';
+		$L   = array_merge( $L, $done ? array_values( array_unique( $done ) ) : array( 'Καμία νέα υποβολή ή έλεγχος.' ) );
+
+		// 3. Τι αναμένεται τις επόμενες 14 ημέρες.
+		$next = array();
+		$n    = count( SD_Data::classes( $year->id ) );
+		foreach ( array(
+			'Έντυπα 1Α'         => SD_Workshops::deadline(),
+			'Έντυπα 2'          => SD_Timeline::deadline_f2(),
+			'Σχέδια τμημάτων'   => SD_Timeline::deadline_sxtm(),
+			'Έντυπα 4'          => SD_F4::deadline(),
+		) as $label => $dl ) {
+			if ( $dl && $dl >= $today && $dl <= $to ) {
+				$next[] = '• Προθεσμία ' . $label . ': ' . mysql2date( 'd/m/Y', $dl );
+			}
+		}
+		foreach ( SD_Plans::plans( $year->id ) as $p ) {
+			foreach ( SD_Plans::goals( $p->id ) as $gi => $g ) {
+				foreach ( SD_Plans::actions( $g->id ) as $a ) {
+					foreach ( array( 'start_date' => 'ξεκινά', 'end_date' => 'λήγει' ) as $f => $verb ) {
+						if ( $a->$f && $a->$f >= $today && $a->$f <= $to ) {
+							$next[] = '• ' . trim( $p->code . ' ' . $p->title ) . ', στόχος ' . ( $gi + 1 ) . ': ενέργεια ' . mb_strtolower( SD_Eval::ACTION_KINDS[ $a->kind ] ?? '' ) . ' ' . $verb . ' ' . mysql2date( 'd/m/Y', $a->$f );
+						}
+					}
+				}
+			}
+		}
+		foreach ( $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . SD_Requests::t() . " WHERE year_id = %d AND status = 'egkrithike' AND event_date BETWEEN %s AND %s ORDER BY event_date", $year->id, $today, $to ) ) as $r ) {
+			$next[] = '• Επίσκεψη/φορέας – ' . $cl( $r->class_id ) . ', ' . mysql2date( 'd/m/Y', $r->event_date ) . ( $r->destination ? ' (' . $r->destination . ')' : '' );
+		}
+		$L[] = '';
+		$L[] = '3. ΤΙ ΑΝΑΜΕΝΕΤΑΙ (επόμενες 14 ημέρες)';
+		$L   = array_merge( $L, $next ? $next : array( 'Καμία προθεσμία ή ενέργεια.' ) );
+
+		// 4. Συνολική εικόνα.
+		$L[] = '';
+		$L[] = '4. ΣΥΝΟΛΙΚΗ ΕΙΚΟΝΑ (' . $n . ' τμήματα)';
+		foreach ( SD_Timeline::school_steps( $year ) as $s ) {
+			list( $label ) = SD_Timeline::STATES[ $s['state'] ];
+			$L[]           = '• ' . $s['title'] . ': ' . $label . ( $s['detail'] ? ' – ' . $s['detail'] : '' );
+		}
+		$L[] = '';
+		$L[] = 'Αναλυτικά στην αρχική οθόνη: ' . SD_Install::app_url();
+		return $L;
+	}
+
 	public static function daily( $force = false ) {
 		$cfg   = self::cfg();
 		$today = current_time( 'Y-m-d' );
@@ -271,8 +398,21 @@ class SD_Notify {
 			return 0;
 		}
 		update_option( self::OPT_LAST, $today, false );
-		$sent = 0;
+		$sent   = 0;
+		$monday = $force || '1' === current_time( 'N' );
 		foreach ( SD_Roles::app_users() as $u ) {
+			// Δευτέρα: η Διεύθυνση παίρνει την εβδομαδιαία αναφορά (μαζί και τυχόν υπενθυμίσεις της), σε ένα email.
+			if ( $monday && $cfg['weekly'] && user_can( $u, SD_Roles::CAP_MANAGE ) ) {
+				$lines = self::weekly_report( $u->ID );
+				$r     = $cfg['reminders'] ? self::reminders_for( $u->ID ) : array();
+				if ( $r ) {
+					$lines = array_merge( $lines, array( '', 'Δικές σας προθεσμίες:' ), $r );
+				}
+				if ( $lines && self::send( $u, 'Εβδομαδιαία αναφορά ' . mysql2date( 'd/m/Y', $today ), $lines ) ) {
+					$sent++;
+				}
+				continue;
+			}
 			$lines = array();
 			if ( $cfg['reminders'] ) {
 				$r = self::reminders_for( $u->ID );
@@ -282,7 +422,7 @@ class SD_Notify {
 					$lines   = array_merge( $lines, $r );
 				}
 			}
-			if ( $cfg['digest'] ) {
+			if ( $cfg['digest'] && ( $force || '1' === current_time( 'N' ) ) ) {
 				$p = self::pending_for_user( $u->ID );
 				if ( $p ) {
 					if ( $lines ) {
@@ -295,7 +435,7 @@ class SD_Notify {
 					}
 				}
 			}
-			if ( $lines && self::send( $u, 'Τι εκκρεμεί σήμερα', $lines ) ) {
+			if ( $lines && self::send( $u, 'Υπενθύμιση προθεσμίας', $lines ) ) {
 				$sent++;
 			}
 		}
@@ -305,16 +445,21 @@ class SD_Notify {
 	/* =================== Ρυθμίσεις =================== */
 
 	public static function handle( $do ) {
-		if ( ! in_array( $do, array( 'notify_save', 'notify_test' ), true ) ) {
+		if ( ! in_array( $do, array( 'notify_save', 'notify_test', 'notify_report' ), true ) ) {
 			return null;
 		}
 		$back = SD_Frontend::url( 'rythmiseis' ) . '#eidopoiiseis';
 		if ( ! current_user_can( SD_Roles::CAP_MANAGE ) ) {
 			return array( new WP_Error( 'sd', 'Μόνο η Διεύθυνση αλλάζει τις ειδοποιήσεις.' ), $back );
 		}
+		if ( 'notify_report' === $do ) {
+			$ok = self::send( wp_get_current_user(), 'Εβδομαδιαία αναφορά (δοκιμή)', self::weekly_report( get_current_user_id() ) );
+			set_transient( 'sd_msg_' . get_current_user_id(), $ok ? array( 'ok', 'Η αναφορά στάλθηκε στο email σας.' ) : array( 'error', 'Η αποστολή απέτυχε. Ελέγξτε τις ρυθμίσεις email του ιστότοπου.' ), 60 );
+			return array( true, $back );
+		}
 		if ( 'notify_test' === $do ) {
 			$n = self::daily( true );
-			set_transient( 'sd_msg_' . get_current_user_id(), array( 'ok', $n ? 'Στάλθηκαν ' . $n . ' μηνύματα με τα σημερινά εκκρεμή.' : 'Δεν υπάρχει σήμερα κάτι για υπενθύμιση· δεν στάλθηκε μήνυμα.' ), 60 );
+			set_transient( 'sd_msg_' . get_current_user_id(), array( 'ok', $n ? 'Στάλθηκαν ' . $n . ' μηνύματα.' : 'Σήμερα δεν πέφτει καμία προθεσμία στις ημέρες υπενθύμισης· δεν στάλθηκε μήνυμα.' ), 60 );
 			return array( true, $back );
 		}
 		$days = preg_replace( '/[^0-9,]/', '', (string) wp_unslash( $_POST['days'] ?? '' ) );
@@ -325,7 +470,9 @@ class SD_Notify {
 				'decision'  => empty( $_POST['decision'] ) ? 0 : 1,
 				'reminders' => empty( $_POST['reminders'] ) ? 0 : 1,
 				'digest'    => empty( $_POST['digest'] ) ? 0 : 1,
-				'days'      => '' !== $days ? $days : '7,2,0',
+				'weekly'    => empty( $_POST['weekly'] ) ? 0 : 1,
+				'days'      => '' !== $days ? $days : '7,2',
+				'v2'        => 1,
 			),
 			false
 		);
@@ -341,13 +488,16 @@ class SD_Notify {
 		};
 		$box( 'submit', 'Όταν υποβάλλεται έντυπο, email σε όσους μπορούν να το ελέγξουν' );
 		$box( 'decision', 'Όταν ένα έντυπο ελέγχεται ή επιστρέφεται, email στον/στην εκπαιδευτικό' );
-		$box( 'reminders', 'Καθημερινή υπενθύμιση για προθεσμίες και για ενέργειες των Σχεδίων Δράσης' );
-		$box( 'digest', 'Καθημερινή σύνοψη όσων περιμένουν έλεγχο (Επιτροπή, Διεύθυνση)' );
-		echo '<label class="sd-block">Πόσες ημέρες πριν (χωρισμένες με κόμμα· 0 = την ίδια μέρα) <input name="days" value="' . esc_attr( $c['days'] ) . '" style="max-width:10em"></label>';
-		echo '<p class="sd-help">Οι υπενθυμίσεις στέλνονται μία φορά την ημέρα, το πρωί, με την πρώτη επίσκεψη στον ιστότοπο. Κάθε εκπαιδευτικός λαμβάνει μόνο όσα αφορούν τα τμήματα και τα σχέδια που έχει αναλάβει. Οι προθεσμίες των εντύπων ορίζονται παραπάνω· των Σχεδίων Δράσης είναι οι ημερομηνίες των ενεργειών τους.</p>';
+		$box( 'reminders', 'Υπενθύμιση όταν πλησιάζει προθεσμία εντύπου ή ενέργεια Σχεδίου Δράσης' );
+		echo '<label class="sd-block">Πόσες ημέρες πριν (χωρισμένες με κόμμα) <input name="days" value="' . esc_attr( $c['days'] ) . '" style="max-width:10em"></label>';
+		$box( 'weekly', 'Εβδομαδιαία αναφορά στη Διεύθυνση κάθε Δευτέρα: τι εκκρεμεί, τι ολοκληρώθηκε, τι αναμένεται' );
+		$box( 'digest', 'Κάθε Δευτέρα και στα μέλη της Επιτροπής: όσα περιμένουν τον έλεγχό τους' );
+		echo '<p class="sd-help">Υπενθύμιση στέλνεται μόνο τις ημέρες που ορίσατε (π.χ. 7 και 2 ημέρες πριν), ένα email ανά άτομο, και μόνο για όσα έχει αναλάβει: τα τμήματά του και τα Σχέδια Δράσης που συντονίζει. Όταν δεν πλησιάζει κάτι, δεν στέλνεται τίποτα. Οι προθεσμίες των εντύπων ορίζονται παραπάνω· των Σχεδίων Δράσης είναι οι ημερομηνίες των ενεργειών τους.</p>';
 		echo '<p><button class="sd-button" type="submit">Αποθήκευση</button></p></form>';
+		SD_Frontend::form_open( 'notify_report' );
+		echo '<button class="sd-button sd-small sd-quiet" type="submit">Στείλτε μου τώρα την εβδομαδιαία αναφορά</button></form> ';
 		SD_Frontend::form_open( 'notify_test' );
-		echo '<button class="sd-button sd-small sd-quiet" type="submit" onclick="return confirm(\'Να σταλούν τώρα τα σημερινά μηνύματα σε όσους έχουν εκκρεμότητες;\');">Αποστολή των σημερινών υπενθυμίσεων τώρα</button></form>';
+		echo '<button class="sd-button sd-small sd-quiet" type="submit" onclick="return confirm(\'Να σταλούν τώρα όσες υπενθυμίσεις αντιστοιχούν στη σημερινή ημέρα;\');">Αποστολή των σημερινών υπενθυμίσεων τώρα</button></form>';
 		echo '</section>';
 	}
 }
