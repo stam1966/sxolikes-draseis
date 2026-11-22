@@ -162,6 +162,8 @@ class SD_Map {
 			'routes'  => isset( $o['routes'] ) ? $o['routes'] : array(),
 			'borders' => isset( $o['borders'] ) ? $o['borders'] : array(),
 			'admin'   => isset( $o['admin_history'] ) ? $o['admin_history'] : array(),
+			'nomoi'   => isset( $o['nomoi'] ) ? $o['nomoi'] : array(),
+			'coasts'  => isset( $o['coastlines'] ) ? $o['coastlines'] : array(),
 			'places'  => array_merge( isset( $o['places'] ) ? $o['places'] : array(), self::class_points( $public ) ),
 			'checked' => isset( $o['checked'] ) ? $o['checked'] : '',
 			'public'  => (bool) $public,

@@ -37,6 +37,8 @@ payload = {
     'borders': data.get('borders', []),
     'admin': data.get('admin_history', []),
     'network': data.get('network', []),
+    'nomoi': data.get('nomoi', []),
+    'coasts': data.get('coastlines', []),
     'places': data['places'],
     'checked': data.get('checked', ''),
     'public': True,

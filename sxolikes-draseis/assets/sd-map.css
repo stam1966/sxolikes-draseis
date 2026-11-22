@@ -106,3 +106,7 @@ body.sd-map-embed .sd-map-shell { height: 100vh; }
 .sd-school-menu button { text-align: left; border: 1px solid #dfe3df; background: #f6faf9; border-radius: 8px; padding: .45rem .6rem; cursor: pointer; font: inherit; color: #24302f; }
 .sd-school-menu button:hover, .sd-school-menu button:focus { background: #e6f0ef; border-color: #2f6f73; }
 .sd-school-menu .is-other { background: #fff; font-style: italic; }
+
+/* Όρια νομών */
+.sd-nomos-label { background: transparent; border: 0; white-space: nowrap; font: 600 12px/1 system-ui, sans-serif; color: #3d4a49; text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff; transform: translate(-50%, -50%); }
+.sd-nomos-label.is-main { font-size: 15px; color: #1f5256; }

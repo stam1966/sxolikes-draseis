@@ -219,6 +219,32 @@
 			this.borderLayer = bl;
 			if (location.hash === '#synora') { bl.addTo(map); }
 		}
+		if ((data.coasts || []).length) {
+			var cl = L.layerGroup();
+			data.coasts.forEach(function (b) {
+				var line = L.polyline(b.coords, { color: b.color, weight: 4, opacity: 0.9, dashArray: b.dash });
+				line.bindTooltip(b.name, { sticky: true });
+				line.bindPopup(function () { return borderPopup(b, data); }, { maxWidth: 360, autoPanPaddingTopLeft: [10, 60] });
+				cl.addLayer(line);
+			});
+			overlays['Αρχαία ακτή του Μαλιακού (σχηματικά)'] = cl;
+			if (location.hash === '#akti') { cl.addTo(map); map.setView([38.85, 22.5], 11); }
+		}
+		if ((data.nomoi || []).length) {
+			var nl = L.layerGroup();
+			data.nomoi.forEach(function (n) {
+				var shape = (n.type === 'MultiPolygon' ? L.polygon(n.coords) : L.polygon(n.coords));
+				shape.setStyle(n.main
+					? { color: '#2f6f73', weight: 3, opacity: 1, fillColor: '#2f6f73', fillOpacity: 0.05 }
+					: { color: '#5b6766', weight: 1.5, opacity: 0.8, fill: false, dashArray: '4 4' });
+				shape.bindTooltip('Νομός ' + n.name, { sticky: true });
+				nl.addLayer(shape);
+				var c = shape.getBounds().getCenter();
+				nl.addLayer(L.marker(c, { interactive: false, keyboard: false, icon: L.divIcon({ className: 'sd-nomos-label' + (n.main ? ' is-main' : ''), html: n.name, iconSize: null }) }));
+			});
+			overlays['Όρια νομών (σήμερα)'] = nl;
+			if (location.hash === '#nomoi') { nl.addTo(map); map.setView([38.9, 22.6], 8); }
+		}
 		L.control.layers(layers, overlays, { position: 'topright', collapsed: false }).addTo(map);
 		L.control.scale({ imperial: false }).addTo(map);
 		this.routeLayer = L.layerGroup().addTo(map);
