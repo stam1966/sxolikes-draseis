@@ -95,3 +95,14 @@ body.sd-map-embed .sd-map-shell { height: 100vh; }
 .sd-sym svg { display: block; }
 .sd-pin svg { display: block; }
 .sd-pin-class { border-radius: 5px; }
+
+/* Σύνορα και επιλογή σχολείου */
+.sd-pop-border .sd-pop-approx { font-size: .85em; font-style: italic; color: #5b6766; }
+.sd-pop-admin { margin: .3rem 0 0; padding-left: 1.1rem; font-size: .9em; }
+.sd-pop-admin li { margin: .15rem 0; }
+.sd-pop-src { font-size: .85em; }
+.sd-school-menu { position: absolute; top: 12px; left: 60px; z-index: 1000; background: #fff; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.25); padding: .6rem; display: flex; flex-direction: column; gap: .25rem; max-width: min(320px, 80vw); font: 14px/1.3 system-ui, sans-serif; }
+.sd-school-menu strong { padding: .2rem .3rem .4rem; }
+.sd-school-menu button { text-align: left; border: 1px solid #dfe3df; background: #f6faf9; border-radius: 8px; padding: .45rem .6rem; cursor: pointer; font: inherit; color: #24302f; }
+.sd-school-menu button:hover, .sd-school-menu button:focus { background: #e6f0ef; border-color: #2f6f73; }
+.sd-school-menu .is-other { background: #fff; font-style: italic; }

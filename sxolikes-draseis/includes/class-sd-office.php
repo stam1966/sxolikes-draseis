@@ -115,8 +115,12 @@ class SD_Office {
 	/**
 	 * @param array $blocks     μπλοκ (βλ. πάνω).
 	 * @param bool  $landscape  οριζόντια σελίδα (για πίνακες με πολλές στήλες).
+	 * @param int   $pt         μέγεθος κειμένου σε στιγμές (οι επικεφαλίδες κλιμακώνονται ανάλογα).
 	 */
-	public static function docx( array $blocks, $landscape = false ) {
+	public static function docx( array $blocks, $landscape = false, $pt = 10 ) {
+		$sz = max( 16, min( 32, (int) round( $pt * 2 ) ) ); // μισές στιγμές
+		$st = (int) round( $sz * 1.5 );
+		$sh = (int) round( $sz * 1.2 );
 		$page_w = $landscape ? 16838 : 11906;
 		$page_h = $landscape ? 11906 : 16838;
 		$usable = $page_w - 2 * 1000;
@@ -158,10 +162,10 @@ class SD_Office {
 		$doc  = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' . $body . $sect . '</w:body></w:document>';
 
 		$styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-			. '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="el-GR"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="80" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'
+			. '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/><w:sz w:val="' . $sz . '"/><w:szCs w:val="' . $sz . '"/><w:lang w:val="el-GR"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="80" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'
 			. '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>'
-			. '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="120"/></w:pPr><w:rPr><w:b/><w:sz w:val="30"/><w:szCs w:val="30"/><w:color w:val="1D5FA8"/></w:rPr></w:style>'
-			. '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:before="200" w:after="80"/></w:pPr><w:rPr><w:b/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:style>'
+			. '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="120"/></w:pPr><w:rPr><w:b/><w:sz w:val="' . $st . '"/><w:szCs w:val="' . $st . '"/><w:color w:val="2F6F73"/></w:rPr></w:style>'
+			. '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:before="200" w:after="80"/></w:pPr><w:rPr><w:b/><w:sz w:val="' . $sh . '"/><w:szCs w:val="' . $sh . '"/><w:color w:val="1F5256"/></w:rPr></w:style>'
 			. '<w:style w:type="table" w:styleId="SDTable"><w:name w:val="SD Table"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:color="9AA5B1"/><w:left w:val="single" w:sz="4" w:color="9AA5B1"/><w:bottom w:val="single" w:sz="4" w:color="9AA5B1"/><w:right w:val="single" w:sz="4" w:color="9AA5B1"/><w:insideH w:val="single" w:sz="4" w:color="9AA5B1"/><w:insideV w:val="single" w:sz="4" w:color="9AA5B1"/></w:tblBorders><w:tblCellMar><w:left w:w="80" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>'
 			. '</w:styles>';
 
@@ -243,8 +247,8 @@ class SD_Office {
 		return self::zip( $files );
 	}
 
-	public static function send_docx( $filename, array $blocks, $landscape = false ) {
-		self::send( $filename . '.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', self::docx( $blocks, $landscape ) );
+	public static function send_docx( $filename, array $blocks, $landscape = false, $pt = 10 ) {
+		self::send( $filename . '.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', self::docx( $blocks, $landscape, $pt ) );
 	}
 
 	public static function send_xlsx( $filename, array $sheets ) {

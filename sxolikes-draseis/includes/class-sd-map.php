@@ -160,6 +160,8 @@ class SD_Map {
 			'school'  => isset( $o['school'] ) ? $o['school'] : null,
 			'cats'    => self::cats(),
 			'routes'  => isset( $o['routes'] ) ? $o['routes'] : array(),
+			'borders' => isset( $o['borders'] ) ? $o['borders'] : array(),
+			'admin'   => isset( $o['admin_history'] ) ? $o['admin_history'] : array(),
 			'places'  => array_merge( isset( $o['places'] ) ? $o['places'] : array(), self::class_points( $public ) ),
 			'checked' => isset( $o['checked'] ) ? $o['checked'] : '',
 			'public'  => (bool) $public,

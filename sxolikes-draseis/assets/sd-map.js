@@ -34,6 +34,30 @@
 		return n;
 	}
 
+	function borderPopup(b, data) {
+		var box = el('div', { class: 'sd-pop sd-pop-border' }, [
+			el('h3', { text: b.name }),
+			el('p', { class: 'sd-pop-period', text: b.period }),
+			el('p', { text: b.text }),
+			el('p', { class: 'sd-pop-approx', text: b.approx })
+		]);
+		if (b.id === 'synora-1832' && (data.admin || []).length) {
+			var ul = el('ul', { class: 'sd-pop-admin' });
+			data.admin.forEach(function (r) { ul.appendChild(el('li', null, [el('strong', { text: r[0] + ': ' }), r[1]])); });
+			box.appendChild(el('details', null, [el('summary', { text: 'Πώς άλλαξε ο νομός (1833–1943)' }), ul]));
+		}
+		if ((b.sources || []).length) {
+			var src = el('p', { class: 'sd-pop-src' }, ['Πηγές: ']);
+			b.sources.forEach(function (u, i) {
+				var host = u.replace(/^https?:\/\//, '').split('/')[0];
+				if (i) { src.appendChild(document.createTextNode(' · ')); }
+				src.appendChild(el('a', { href: u, target: '_blank', rel: 'noopener', text: host }));
+			});
+			box.appendChild(src);
+		}
+		return box;
+	}
+
 	function km(a, b) {
 		var R = 6371, r = Math.PI / 180;
 		var dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
@@ -182,7 +206,20 @@
 		var topo = L.tileLayer(TOPO.url, { maxZoom: TOPO.maxZoom, attribution: TOPO.attr, subdomains: TOPO.subdomains });
 		var layers = { 'Χάρτης': base };
 		layers[TOPO.name] = topo;
-		L.control.layers(layers, null, { position: 'topright', collapsed: false }).addTo(map);
+		var overlays = {};
+		if ((data.borders || []).length) {
+			var bl = L.layerGroup();
+			data.borders.forEach(function (b) {
+				var line = L.polyline(b.coords, { color: b.color || '#b3261e', weight: 4, opacity: 0.9, dashArray: b.dash || '8 6' });
+				line.bindTooltip(b.name + ' · ' + b.period, { sticky: true });
+				line.bindPopup(function () { return borderPopup(b, data); }, { maxWidth: 360, autoPanPaddingTopLeft: [10, 60] });
+				bl.addLayer(line);
+			});
+			overlays['Σύνορα 1830–1881 (σχηματικά)'] = bl;
+			this.borderLayer = bl;
+			if (location.hash === '#synora') { bl.addTo(map); }
+		}
+		L.control.layers(layers, overlays, { position: 'topright', collapsed: false }).addTo(map);
 		L.control.scale({ imperial: false }).addTo(map);
 		this.routeLayer = L.layerGroup().addTo(map);
 		this.measureLayer = L.layerGroup().addTo(map);
@@ -244,24 +281,43 @@
 	};
 
 	MapApp.prototype.setSchool = function (ll, save) {
-		this.data.school = { lat: ll.lat, lng: ll.lng };
+		this.data.school = { lat: ll.lat, lng: ll.lng, name: ll.name || (this.data.school && this.data.school.name) || '' };
+		var label = this.data.school.name || 'Το σχολείο μας';
 		if (this.schoolMarker) { this.map.removeLayer(this.schoolMarker); }
 		this.schoolMarker = L.marker([ll.lat, ll.lng], {
-			icon: L.divIcon({ className: 'sd-pin-wrap', html: '<span class="sd-school-pin" title="Το σχολείο μας">★</span>', iconSize: [30, 30], iconAnchor: [15, 15] }),
-			keyboard: false, zIndexOffset: 1000
-		}).bindTooltip('Το σχολείο μας').addTo(this.map);
+			icon: L.divIcon({ className: 'sd-pin-wrap', html: '<span class="sd-school-pin">★</span>', iconSize: [30, 30], iconAnchor: [15, 15] }),
+			keyboard: false, zIndexOffset: 1000, title: label
+		}).bindTooltip(label).addTo(this.map);
 		if (save) {
 			try { localStorage.setItem('sd-map-school', JSON.stringify(this.data.school)); } catch (e) { /* δεν πειράζει */ }
 		}
 	};
 
-	MapApp.prototype.pickSchool = function () {
+	MapApp.prototype.pickSchool = function (name) {
 		var self = this, map = this.map;
+		if (name === undefined && (this.data.network || []).length) {
+			if (this.schoolMenu) { this.schoolMenu.remove(); this.schoolMenu = null; return; }
+			var menu = el('div', { class: 'sd-school-menu', role: 'dialog', 'aria-label': 'Επιλογή σχολείου' }, [el('strong', { text: 'Ποιο είναι το σχολείο σας;' })]);
+			this.data.network.forEach(function (n) {
+				menu.appendChild(el('button', { type: 'button', text: n.name + (n.lat === null ? ' (κλικ στον χάρτη)' : (n.approx ? ' (κατά προσέγγιση)' : '')), onclick: function () {
+					menu.remove(); self.schoolMenu = null;
+					if (n.lat === null) { self.pickSchool(n.name); return; }
+					self.setSchool({ lat: n.lat, lng: n.lng, name: n.name }, true);
+					map.setView([n.lat, n.lng], Math.max(map.getZoom(), 12));
+					self.refresh();
+				} }));
+			});
+			menu.appendChild(el('button', { type: 'button', class: 'is-other', text: 'Άλλο σχολείο: κλικ στον χάρτη', onclick: function () { menu.remove(); self.schoolMenu = null; self.pickSchool(''); } }));
+			L.DomEvent.disableClickPropagation(menu);
+			this.measureInfo.parentNode.appendChild(menu);
+			this.schoolMenu = menu;
+			return;
+		}
 		this.measureInfo.hidden = false;
 		this.measureInfo.textContent = 'Κάντε κλικ στη θέση του σχολείου σας.';
 		map.getContainer().style.cursor = 'crosshair';
 		map.once('click', function (e) {
-			self.setSchool(e.latlng, true);
+			self.setSchool({ lat: e.latlng.lat, lng: e.latlng.lng, name: name || '' }, true);
 			map.getContainer().style.cursor = '';
 			self.measureInfo.textContent = 'Το σχολείο ορίστηκε. Οι αποστάσεις μετρούν από εκεί.';
 			setTimeout(function () { self.measureInfo.hidden = true; }, 2500);
