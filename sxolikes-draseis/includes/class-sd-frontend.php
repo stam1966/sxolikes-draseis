@@ -138,7 +138,7 @@ class SD_Frontend {
 		$result = true;
 
 		$plans = SD_Plans::handle( $do );
-		foreach ( array( 'SD_Workshops', 'SD_Citizen', 'SD_Settings', 'SD_Map', 'SD_Requests', 'SD_F4', 'SD_Users', 'SD_ErgPlan', 'SD_AiField', 'SD_PlanImport' ) as $module ) {
+		foreach ( array( 'SD_Workshops', 'SD_Citizen', 'SD_Settings', 'SD_Map', 'SD_Requests', 'SD_F4', 'SD_Users', 'SD_ErgPlan', 'SD_AiField', 'SD_PlanImport', 'SD_Notify' ) as $module ) {
 			if ( null === $plans ) {
 				$plans = $module::handle( $do );
 			}
@@ -313,6 +313,10 @@ class SD_Frontend {
 				continue;
 			}
 			$tag  = ( '' !== $def[2] && 'admin' !== $def[2] ) ? ' <span class="sd-nav-no">' . esc_html( $def[2] ) . '</span>' : '';
+			if ( 'arxiki' === $key && current_user_can( SD_Roles::CAP_REVIEW ) ) {
+				$pending = count( SD_Notify::pending_for_user() );
+				$tag    .= $pending ? ' <span class="sd-nav-count" title="Περιμένουν τον έλεγχό σας">' . (int) $pending . '</span>' : '';
+			}
 			$item = sprintf(
 				'<li><a href="%s"%s>%s%s</a></li>',
 				esc_url( self::url( $key ) ),

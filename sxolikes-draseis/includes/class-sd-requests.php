@@ -268,6 +268,7 @@ class SD_Requests {
 				),
 				array( 'id' => $r->id )
 			);
+			SD_Notify::submitted( 'Αίτημα επίσκεψης ή φορέα (Έντυπο 3) · τμήμα ' . SD_Data::class_label( $class ), $class->id, $back, true );
 			return array( true, $back );
 		}
 
@@ -285,6 +286,7 @@ class SD_Requests {
 					return array( new WP_Error( 'sd', 'Γράψτε τι χρειάζεται διόρθωση.' ), $back );
 				}
 				$wpdb->update( self::t(), array( 'status' => 'epistrafike', 'review_note' => $note, 'reviewed_by' => get_current_user_id(), 'reviewed_at' => current_time( 'mysql' ) ), array( 'id' => $r->id ) );
+				SD_Notify::decided( 'Αίτημα επίσκεψης ή φορέα (Έντυπο 3)', $r->class_id, $r->owner_id, true, $note, $back );
 				return array( true, $back );
 			}
 			$praxi_no   = self::text( 'praxi_no', 30, false );
@@ -309,6 +311,7 @@ class SD_Requests {
 				),
 				array( 'id' => $r->id )
 			);
+			SD_Notify::decided( 'Αίτημα επίσκεψης ή φορέα (Έντυπο 3): εγκρίθηκε με την πράξη ' . $praxi_no . '/' . mysql2date( 'd-m-Y', $praxi_date ), $r->class_id, $r->owner_id, false, $note, $back );
 			return array( true, $back );
 		}
 

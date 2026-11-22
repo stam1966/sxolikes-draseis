@@ -247,6 +247,7 @@ class SD_F4 {
 				return array( new WP_Error( 'sd', 'Συμπληρώστε πρώτα: ' . implode( ', ', $missing ) . '.' ), $back );
 			}
 			$wpdb->update( self::t(), array( 'status' => 'ypovlithike', 'submitted_by' => get_current_user_id(), 'submitted_at' => current_time( 'mysql' ) ), array( 'id' => $f->id ) );
+			SD_Notify::submitted( 'Έντυπο 4 (αποτίμηση) · τμήμα ' . SD_Data::class_label( $class ), $class->id, $back );
 			return array( true, $back );
 		}
 
@@ -257,12 +258,16 @@ class SD_F4 {
 		if ( ! $f || ! in_array( $f->status, array( 'ypovlithike', 'elegxthike' ), true ) ) {
 			return array( new WP_Error( 'sd', 'Το έντυπο δεν έχει υποβληθεί.' ), $back );
 		}
+		if ( ! SD_Notify::may_review( $f->submitted_by, $class->id ) ) {
+			return array( new WP_Error( 'sd', SD_Notify::why_not( $f->submitted_by, $class->id ) ), $back );
+		}
 		$decision = isset( $_POST['decision'] ) ? sanitize_key( wp_unslash( $_POST['decision'] ) ) : '';
 		$note     = self::clean( isset( $_POST['review_note'] ) ? wp_unslash( $_POST['review_note'] ) : '', 1000 ); // phpcs:ignore WordPress.Security
 		if ( 'return' === $decision && '' === trim( $note ) ) {
 			return array( new WP_Error( 'sd', 'Γράψτε τι χρειάζεται διόρθωση.' ), $back );
 		}
 		$wpdb->update( self::t(), array( 'status' => 'return' === $decision ? 'epistrafike' : 'elegxthike', 'review_note' => $note, 'reviewed_by' => get_current_user_id(), 'reviewed_at' => current_time( 'mysql' ) ), array( 'id' => $f->id ) );
+		SD_Notify::decided( 'Έντυπο 4 (αποτίμηση) · τμήμα ' . SD_Data::class_label( $class ), $class->id, $f->submitted_by, 'return' === $decision, $note, $back );
 		return array( true, $back );
 	}
 
@@ -413,7 +418,7 @@ class SD_F4 {
 			SD_Frontend::form_open( 'f4_submit' );
 			echo '<input type="hidden" name="class_id" value="' . (int) $class->id . '"><p><button class="sd-button" type="submit"' . ( $missing ? ' disabled' : '' ) . '>Υποβολή στη Διεύθυνση</button></p></form>';
 		}
-		if ( $f && current_user_can( SD_Roles::CAP_REVIEW ) && in_array( $f->status, array( 'ypovlithike', 'elegxthike' ), true ) ) {
+		if ( $f && current_user_can( SD_Roles::CAP_REVIEW ) && in_array( $f->status, array( 'ypovlithike', 'elegxthike' ), true ) && SD_Notify::review_gate( $f->submitted_by, $class->id, $f->status ) ) {
 			echo '<section class="sd-card"><h3>Έλεγχος Επιτροπής / Διεύθυνσης</h3>';
 			SD_Frontend::form_open( 'f4_review' );
 			echo '<input type="hidden" name="class_id" value="' . (int) $class->id . '"><label class="sd-block">Σχόλια (υποχρεωτικά για επιστροφή)<textarea name="review_note" rows="2">' . esc_textarea( $f->review_note ) . '</textarea></label>';

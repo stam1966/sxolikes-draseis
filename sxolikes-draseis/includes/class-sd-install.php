@@ -24,6 +24,7 @@ class SD_Install {
 
 	public static function deactivate() {
 		// Τίποτα δεν διαγράφεται. Τα δεδομένα μένουν για επανενεργοποίηση.
+		wp_clear_scheduled_hook( 'sd_daily_notify' ); // σταματούν οι καθημερινές υπενθυμίσεις
 	}
 
 	public static function maybe_upgrade() {

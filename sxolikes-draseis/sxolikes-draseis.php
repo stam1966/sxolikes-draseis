@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Σχολικές Δράσεις
  * Description:       Σχεδιασμός Εργαστηρίων Δεξιοτήτων και Δράσεων Ενεργού Πολίτη, συνδεδεμένων με τα Σχέδια Δράσης της εσωτερικής αξιολόγησης.
- * Version:           0.12.0
+ * Version:           0.13.0
  * Update URI:        https://github.com/stam1966/sxolikes-draseis
  * Requires at least: 6.2
  * Requires PHP:      7.4
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SD_VERSION', '0.12.0' );
+define( 'SD_VERSION', '0.13.0' );
 define( 'SD_DB_VERSION', '8' );
 define( 'SD_FILE', __FILE__ );
 define( 'SD_DIR', plugin_dir_path( __FILE__ ) );
@@ -40,6 +40,7 @@ require_once SD_DIR . 'includes/class-sd-timeline.php';
 require_once SD_DIR . 'includes/class-sd-aifield.php';
 require_once SD_DIR . 'includes/class-sd-planimport.php';
 require_once SD_DIR . 'includes/class-sd-guide.php';
+require_once SD_DIR . 'includes/class-sd-notify.php';
 require_once SD_DIR . 'includes/class-sd-updater.php';
 
 SD_Updater::init(); // ενημερώσεις από το GitHub (και στο cron, όχι μόνο στη διαχείριση)
@@ -56,4 +57,5 @@ add_action( 'init', array( 'SD_Access', 'init' ) );
 add_action( 'init', array( 'SD_Frontend', 'init' ) );
 add_action( 'init', array( 'SD_Map', 'init' ) );
 add_action( 'init', array( 'SD_AiField', 'init' ) );
+add_action( 'init', array( 'SD_Notify', 'init' ) );
 add_action( 'init', array( 'SD_Exports', 'init' ) );

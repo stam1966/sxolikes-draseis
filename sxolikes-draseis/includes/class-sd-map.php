@@ -292,6 +292,7 @@ class SD_Map {
 				),
 				array( 'id' => $place->id )
 			);
+			SD_Notify::submitted( 'Σημείο χάρτη «' . $place->name . '»', (int) $place->class_id, $back );
 			return array( true, $back );
 		}
 
@@ -301,6 +302,9 @@ class SD_Map {
 			}
 			if ( ! $place || 'ypovlithike' !== $place->status ) {
 				return array( new WP_Error( 'sd', 'Το σημείο δεν έχει υποβληθεί.' ), $back );
+			}
+			if ( ! SD_Notify::may_review( 0, (int) $place->class_id ) ) {
+				return array( new WP_Error( 'sd', SD_Notify::why_not( 0, (int) $place->class_id ) ), $back );
 			}
 			$decision = isset( $_POST['decision'] ) ? sanitize_key( wp_unslash( $_POST['decision'] ) ) : '';
 			$note     = self::text( 'review_note', 1000 );
@@ -317,6 +321,7 @@ class SD_Map {
 				),
 				array( 'id' => $place->id )
 			);
+			SD_Notify::decided( 'Σημείο χάρτη «' . $place->name . '»' . ( 'return' === $decision ? '' : ' (δημοσιεύτηκε)' ), (int) $place->class_id, 0, 'return' === $decision, $note, $back );
 			return array( true, $back );
 		}
 
@@ -499,7 +504,7 @@ class SD_Map {
 			self::render_edit( $place, $year );
 		}
 
-		if ( $place && $review && 'ypovlithike' === $place->status ) {
+		if ( $place && $review && 'ypovlithike' === $place->status && SD_Notify::review_gate( 0, (int) $place->class_id, $place->status ) ) {
 			echo '<section class="sd-card"><h3>Έγκριση από Επιτροπή / Διεύθυνση</h3><p class="sd-help">Ελέγξτε ότι η πληροφορία έχει πηγή, ότι μύθος και ιστορία είναι χωριστά και ότι η φωτογραφία δεν δείχνει πρόσωπα μαθητών.</p>';
 			SD_Frontend::form_open( 'place_review' );
 			echo '<input type="hidden" name="place_id" value="' . (int) $place->id . '">';

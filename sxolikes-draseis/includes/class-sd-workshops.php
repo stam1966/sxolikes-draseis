@@ -233,6 +233,9 @@ class SD_Workshops {
 			if ( ! $form || ! in_array( $form->status, array( 'ypovlithike', 'elegxthike' ), true ) ) {
 				return array( new WP_Error( 'sd', 'Το έντυπο δεν έχει υποβληθεί.' ), $back );
 			}
+			if ( ! SD_Notify::may_review( $form->submitted_by, $class->id ) ) {
+				return array( new WP_Error( 'sd', SD_Notify::why_not( $form->submitted_by, $class->id ) ), $back );
+			}
 			$decision = isset( $_POST['decision'] ) ? sanitize_key( wp_unslash( $_POST['decision'] ) ) : '';
 			$note     = isset( $_POST['review_note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['review_note'] ) ) : '';
 			if ( 'return' === $decision && '' === trim( $note ) ) {
@@ -248,6 +251,7 @@ class SD_Workshops {
 				),
 				array( 'id' => $form->id )
 			);
+			SD_Notify::decided( 'Έντυπο 1Α · τμήμα ' . SD_Data::class_label( $class ), $class->id, $form->submitted_by, 'return' === $decision, $note, $back );
 			return array( true, $back );
 		}
 
@@ -269,6 +273,7 @@ class SD_Workshops {
 				),
 				array( 'id' => $form->id )
 			);
+			SD_Notify::submitted( 'Έντυπο 1Α · τμήμα ' . SD_Data::class_label( $class ), $class->id, $back );
 			return array( true, $back );
 		}
 
@@ -477,7 +482,7 @@ class SD_Workshops {
 			echo '</section>';
 		}
 
-		if ( current_user_can( SD_Roles::CAP_REVIEW ) && $form && in_array( $form->status, array( 'ypovlithike', 'elegxthike' ), true ) ) {
+		if ( current_user_can( SD_Roles::CAP_REVIEW ) && $form && in_array( $form->status, array( 'ypovlithike', 'elegxthike' ), true ) && SD_Notify::review_gate( $form->submitted_by, $class->id, $form->status ) ) {
 			echo '<section class="sd-card"><h3>Έλεγχος Επιτροπής / Διεύθυνσης</h3>';
 			SD_Frontend::form_open( 'f1a_review' );
 			echo '<input type="hidden" name="class_id" value="' . (int) $class->id . '">';

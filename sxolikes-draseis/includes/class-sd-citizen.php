@@ -390,6 +390,9 @@ class SD_Citizen {
 			if ( ! in_array( $dep->status, array( 'ypovlithike', 'elegxthike' ), true ) ) {
 				return array( new WP_Error( 'sd', 'Το έντυπο δεν έχει υποβληθεί.' ), $back );
 			}
+			if ( ! SD_Notify::may_review( $dep->submitted_by, $dep->class_id ) ) {
+				return array( new WP_Error( 'sd', SD_Notify::why_not( $dep->submitted_by, $dep->class_id ) ), $back );
+			}
 			$decision = isset( $_POST['decision'] ) ? sanitize_key( wp_unslash( $_POST['decision'] ) ) : '';
 			$note     = self::text( 'review_note' );
 			if ( 'return' === $decision && '' === trim( $note ) ) {
@@ -405,6 +408,7 @@ class SD_Citizen {
 				),
 				array( 'id' => $dep->id )
 			);
+			SD_Notify::decided( 'Έντυπο 2 «' . $dep->title . '»', $dep->class_id, $dep->submitted_by, 'return' === $decision, $note, $back );
 			return array( true, $back );
 		}
 
@@ -433,6 +437,7 @@ class SD_Citizen {
 				),
 				array( 'id' => $dep->id )
 			);
+			SD_Notify::submitted( 'Έντυπο 2 «' . $dep->title . '»', $dep->class_id, $back );
 			return array( true, $back );
 		}
 
@@ -793,7 +798,7 @@ class SD_Citizen {
 			echo '</section>';
 		}
 
-		if ( current_user_can( SD_Roles::CAP_REVIEW ) && in_array( $dep->status, array( 'ypovlithike', 'elegxthike' ), true ) ) {
+		if ( current_user_can( SD_Roles::CAP_REVIEW ) && in_array( $dep->status, array( 'ypovlithike', 'elegxthike' ), true ) && SD_Notify::review_gate( $dep->submitted_by, $dep->class_id, $dep->status ) ) {
 			echo '<section class="sd-card"><h3>Έλεγχος Επιτροπής / Διεύθυνσης</h3>';
 			SD_Frontend::form_open( 'dep_review' );
 			echo '<input type="hidden" name="dep_id" value="' . (int) $dep->id . '">';
