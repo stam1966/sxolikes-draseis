@@ -633,7 +633,7 @@ class SD_Citizen {
 		$issues = self::issues( $dep, $class );
 		$ro     = $edit ? '' : ' disabled';
 
-		echo '<p><a href="' . esc_url( SD_Frontend::url( 'politis' ) ) . '">← Όλες οι δράσεις</a> · <a href="' . esc_url( SD_Frontend::url( 'politis', array( 'print' => $dep->id ) ) ) . '" target="_blank" rel="noopener">Εκτύπωση</a> · <a href="' . esc_url( SD_Exports::url( 'f2', $dep->id ) ) . '">Word (Έντυπο 2)</a> · <a href="' . esc_url( SD_Exports::url( 'f2p', $dep->id ) ) . '">Word (Πρότυπο Ανάπτυξης Δράσης)</a></p>';
+		echo '<p><a href="' . esc_url( SD_Frontend::url( 'politis' ) ) . '">← Όλες οι δράσεις</a> · <a href="' . esc_url( SD_Frontend::url( 'politis', array( 'print' => $dep->id ) ) ) . '" target="_blank" rel="noopener">Εκτύπωση</a> · ' . SD_Exports::links( 'f2', $dep->id, 'Word (Έντυπο 2)' ) . ' · ' . SD_Exports::links( 'f2p', $dep->id, 'Word (Πρότυπο Ανάπτυξης Δράσης)' ) . '</p>';
 		echo '<h2>Έντυπο 2 · ' . esc_html( SD_Data::class_label( $class ) ) . ': ' . esc_html( $dep->title ) . ' ' . self::badge( $dep->status ) . '</h2>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<p class="sd-meta">Ηλικιακό επίπεδο ΠΣ: ' . esc_html( self::age_group( $class->grade ) ) . '</p>';
 
@@ -911,7 +911,7 @@ class SD_Citizen {
 		if ( $dep->f1a_unit && $class ) {
 			$u = SD_Workshops::units( SD_Workshops::form_of_class( $class->id ) )[ (int) $dep->f1a_unit ] ?? null;
 			if ( $u && $u->cycle ) {
-				$lessons[] = 'Εργαστήρια Δεξιοτήτων: ' . SD_Workshops::CYCLES[ $u->cycle ] . ' – ' . SD_Workshops::subtheme( $class->grade, $u->cycle ) . ( $u->title ? ' («' . $u->title . '»)' : '' ) . ' · ' . SD_Workshops::UNITS[ (int) $dep->f1a_unit ];
+				$lessons[] = 'Εργαστήρια Δεξιοτήτων: ' . SD_Workshops::CYCLES[ $u->cycle ] . ' – ' . SD_Workshops::class_subtheme( $class, $u->cycle ) . ( $u->title ? ' («' . $u->title . '»)' : '' ) . ' · ' . SD_Workshops::UNITS[ (int) $dep->f1a_unit ];
 			}
 		}
 		$b = array(

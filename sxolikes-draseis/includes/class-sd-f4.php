@@ -313,7 +313,7 @@ class SD_F4 {
 		echo '<table class="sd-table"><thead><tr><th>Τμήμα</th><th>Κατάσταση</th><th></th></tr></thead><tbody>';
 		foreach ( $classes as $c ) {
 			$f = self::form_of_class( $c->id );
-			echo '<tr><td><a href="' . esc_url( SD_Frontend::url( 'apotimisi', array( 'class' => $c->id ) ) ) . '">' . esc_html( SD_Data::class_label( $c ) ) . '</a></td><td>' . self::badge( $f ) . '</td><td>' . ( $f ? '<a href="' . esc_url( SD_Exports::url( 'f4', $c->id ) ) . '">Word</a>' : '' ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			echo '<tr><td><a href="' . esc_url( SD_Frontend::url( 'apotimisi', array( 'class' => $c->id ) ) ) . '">' . esc_html( SD_Data::class_label( $c ) ) . '</a></td><td>' . self::badge( $f ) . '</td><td>' . ( $f ? '' . SD_Exports::links( 'f4', $c->id, 'Word' ) . '' : '' ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		}
 		if ( ! $classes ) {
 			echo '<tr><td colspan="3">Δεν σας έχει αντιστοιχιστεί τμήμα.</td></tr>';
@@ -349,7 +349,7 @@ class SD_F4 {
 
 		echo '<p><a href="' . esc_url( SD_Frontend::url( 'apotimisi' ) ) . '">← Όλα τα τμήματα</a>';
 		if ( $f ) {
-			echo ' · <a href="' . esc_url( SD_Frontend::url( 'apotimisi', array( 'print' => $class->id ) ) ) . '">Εκτυπώσιμη μορφή</a> · <a href="' . esc_url( SD_Exports::url( 'f4', $class->id ) ) . '">Λήψη σε Word</a>';
+			echo ' · <a href="' . esc_url( SD_Frontend::url( 'apotimisi', array( 'print' => $class->id ) ) ) . '">Εκτυπώσιμη μορφή</a> · ' . SD_Exports::links( 'f4', $class->id, 'Λήψη σε Word' ) . '';
 		}
 		echo '</p><h2>Έντυπο 4 · Αποτίμηση · Τμήμα ' . esc_html( SD_Data::class_label( $class ) ) . '</h2><p>' . self::badge( $f ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		if ( $f && $f->review_note && in_array( $f->status, array( 'epistrafike', 'elegxthike' ), true ) ) {
@@ -535,7 +535,7 @@ class SD_F4 {
 			echo '<p class="sd-notice sd-error">Δεν έχετε πρόσβαση.</p>';
 			return;
 		}
-		echo '<p class="sd-noprint"><a href="' . esc_url( SD_Frontend::url( 'apotimisi' ) ) . '">← Αποτίμηση</a> · <a href="' . esc_url( SD_Exports::url( 'sd', $plan->id ) ) . '">Λήψη σε Word</a></p>';
+		echo '<p class="sd-noprint"><a href="' . esc_url( SD_Frontend::url( 'apotimisi' ) ) . '">← Αποτίμηση</a> · ' . SD_Exports::links( 'sd', $plan->id, 'Λήψη σε Word' ) . '</p>';
 		echo '<h2>Αποτίμηση ' . esc_html( trim( $plan->code . ' «' . $plan->title . '»' ) ) . '</h2><p class="sd-help">Η συμβολή των τάξεων από τα Έντυπα 4. Βοηθά τον/τη συντονιστή/τρια να γράψει την αποτίμηση στην πλατφόρμα.</p>';
 		$rows = self::plan_rows( $plan );
 		if ( ! $rows ) {

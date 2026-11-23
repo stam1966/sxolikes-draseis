@@ -73,6 +73,32 @@ class SD_Workshops {
 		return $id ? $id . ' ' . self::SUBTHEMES[ $id ] : '';
 	}
 
+	/** Οι υποθεματικές μιας θεματικής: [id => «id τίτλος»]. */
+	public static function cycle_subthemes( $cycle ) {
+		$out = array();
+		foreach ( self::SUBTHEMES as $id => $l ) {
+			if ( 0 === strpos( $id, (int) $cycle . '.' ) ) {
+				$out[ $id ] = $id . ' ' . $l;
+			}
+		}
+		return $out;
+	}
+
+	/** Η υποθεματική που διάλεξε το τμήμα (Σχέδιο τμήματος), αλλιώς αυτή της τάξης. */
+	public static function class_subtheme_id( $class, $cycle ) {
+		$plan = SD_ErgPlan::class_plan( $class->id );
+		$id   = $plan ? ( $plan->cycle_arr[ (int) $cycle ]['subtheme'] ?? '' ) : '';
+		if ( $id && isset( self::SUBTHEMES[ $id ] ) && 0 === strpos( $id, (int) $cycle . '.' ) ) {
+			return $id;
+		}
+		return self::GRADE_SUBTHEMES[ (int) $class->grade ][ (int) $cycle ] ?? '';
+	}
+
+	public static function class_subtheme( $class, $cycle ) {
+		$id = self::class_subtheme_id( $class, $cycle );
+		return $id ? $id . ' ' . self::SUBTHEMES[ $id ] : '';
+	}
+
 	public static function deadline() {
 		return (string) get_option( self::OPT_DEADLINE, '2026-11-27' );
 	}
@@ -373,14 +399,15 @@ class SD_Workshops {
 		}
 	}
 
+	/** Αρχική των Εργαστηρίων: ο Προγραμματισμός κάθε τμήματος, όπως στο έντυπο. */
 	private static function render_list() {
 		$year = SD_Data::active_year();
 		if ( ! $year ) {
 			echo '<p class="sd-notice sd-error">Δεν υπάρχει τρέχον σχολικό έτος.</p>';
 			return;
 		}
-		echo '<h2>Εργαστήρια Δεξιοτήτων · Έντυπο 1Α</h2>';
-		echo '<p class="sd-help">Ένα έντυπο ανά τμήμα, με τις 4 θεματικές ενότητες του έτους. Προθεσμία υποβολής: <strong>' . esc_html( mysql2date( 'd/m/Y', self::deadline() ) ) . '</strong>.</p>';
+		echo '<h2>Εργαστήρια Δεξιοτήτων · Προγραμματισμός ' . esc_html( $year->label ) . '</h2>';
+		echo '<p class="sd-help">Για κάθε τμήμα: ποιος/ποια υλοποιεί, θεματική, υποθεματική, τίτλος και περίοδος. Συμπληρώνεται από το <strong>Έντυπο 1Α</strong> (σειρά ενοτήτων, περίοδος) και το <strong>Σχέδιο τμήματος</strong> (υποθεματική, τίτλος, άλλοι/ες εκπαιδευτικοί). Προθεσμία υποβολής 1Α: <strong>' . esc_html( mysql2date( 'd/m/Y', self::deadline() ) ) . '</strong>.</p>';
 
 		$classes = current_user_can( SD_Roles::CAP_REVIEW ) ? SD_Data::classes( $year->id ) : SD_Data::classes_of_user( get_current_user_id(), $year->id );
 		if ( ! $classes ) {
@@ -388,27 +415,29 @@ class SD_Workshops {
 			return;
 		}
 		if ( current_user_can( SD_Roles::CAP_REVIEW ) ) {
-			echo '<p><a class="sd-button sd-small" href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxolio' => 1 ) ) ) . '">Σχέδιο Δράσης Σχολικής Μονάδας</a> <a class="sd-button sd-small" href="' . esc_url( SD_Exports::url( 'progall', 0 ) ) . '">Προγραμματισμός Εκπαιδευτικών, όλα τα τμήματα (Word)</a></p>';
+			echo '<p><a class="sd-button sd-small" href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxolio' => 1 ) ) ) . '">Σχέδιο Δράσης Σχολικής Μονάδας</a> <span class="sd-meta">Προγραμματισμός όλων των τμημάτων: ' . SD_Exports::links( 'progall', 0 ) . '</span></p>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		}
-		echo '<table class="sd-table"><thead><tr><th>Τμήμα</th><th>Κατάσταση</th><th>Θεματικές</th><th>Εβδομάδες</th><th>Σύνδεση με ΣΔ</th><th></th></tr></thead><tbody>';
 		foreach ( $classes as $c ) {
-			$form   = self::form_of_class( $c->id );
-			$units  = self::units( $form );
-			$cycles = array();
-			$weeks  = 0;
-			$links  = 0;
-			foreach ( $units as $u ) {
-				if ( $u->cycle ) {
-					$cycles[ $u->cycle ] = true;
-				}
+			$form  = self::form_of_class( $c->id );
+			$weeks = 0;
+			$links = 0;
+			foreach ( self::units( $form ) as $u ) {
 				$weeks += (int) $u->weeks;
 				$links += $u->action_id ? 1 : 0;
 			}
-			echo '<tr><td><strong>' . esc_html( SD_Data::class_label( $c ) ) . '</strong></td><td>' . self::status_badge( $form ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
-			echo '<td>' . count( $cycles ) . ' / 4</td><td>' . (int) $weeks . '</td><td>' . (int) $links . ' / 4</td>';
-			echo '<td><a href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'class' => $c->id ) ) ) . '">Έντυπο 1Α</a> · <a href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxedio' => $c->id ) ) ) . '">Σχέδιο τμήματος</a> · <a href="' . esc_url( SD_Exports::url( 'prog', $c->id ) ) . '">Προγραμματισμός (Word)</a></td></tr>';
+			echo '<section class="sd-card sd-prog"><h3>Τμήμα ' . esc_html( SD_Data::class_label( $c ) ) . ' ' . self::status_badge( $form ) . '</h3>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			echo '<div class="sd-table-wrap"><table class="sd-table"><thead><tr><th>Εκπαιδευτικός</th><th>Θεματική ενότητα</th><th>Υποθεματική</th><th>Τίτλος</th><th>Περίοδος</th></tr></thead><tbody>';
+			foreach ( SD_ErgPlan::programming_rows( $c ) as $r ) {
+				echo '<tr><td>' . esc_html( $r['teacher'] ? $r['teacher'] : '—' ) . '</td><td>' . esc_html( $r['cycle'] ) . '</td><td>' . esc_html( $r['subtheme'] ) . '</td><td>' . ( '' !== $r['title'] ? '«' . esc_html( $r['title'] ) . '»' : '<span class="sd-meta">χωρίς τίτλο ακόμη</span>' ) . '</td><td>' . esc_html( $r['period'] ? $r['period'] : '—' ) . '</td></tr>';
+			}
+			echo '</tbody></table></div>';
+			echo '<p class="sd-meta">Εβδομάδες: ' . (int) $weeks . ' · Σύνδεση με Σχέδια Δράσης: ' . (int) $links . ' / 4</p>';
+			echo '<p><a class="sd-button sd-small" href="' . esc_url( self::url_form( $c ) ) . '">Έντυπο 1Α</a> <a class="sd-button sd-small sd-quiet" href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxedio' => $c->id ) ) ) . '">Σχέδιο τμήματος</a> <span class="sd-meta">Προγραμματισμός: ' . SD_Exports::links( 'prog', $c->id ) . '</span></p></section>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		}
-		echo '</tbody></table>';
+	}
+
+	private static function url_form( $class ) {
+		return SD_Frontend::url( 'ergastiria', array( 'class' => $class->id ) );
 	}
 
 	private static function render_form( $class_id ) {
@@ -433,7 +462,7 @@ class SD_Workshops {
 			}
 		}
 
-		echo '<p><a href="' . esc_url( SD_Frontend::url( 'ergastiria' ) ) . '">← Όλα τα τμήματα</a> · <a href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'print' => $class->id ) ) ) . '" target="_blank" rel="noopener">Εκτύπωση</a></p>';
+		echo '<p><a href="' . esc_url( SD_Frontend::url( 'ergastiria' ) ) . '">← Όλα τα τμήματα</a> · <a href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'print' => $class->id ) ) ) . '" target="_blank" rel="noopener">Εκτύπωση</a> · ' . SD_Exports::links( 'f1a', $class->id ) . '</p>';
 		echo '<h2>Έντυπο 1Α · Τμήμα ' . esc_html( SD_Data::class_label( $class ) ) . ' ' . self::status_badge( $form ) . '</h2>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<p class="sd-meta">Υπεύθυνος/η Εργαστηρίων: ' . esc_html( isset( $by_role['ergastiria'] ) ? implode( ', ', $by_role['ergastiria'] ) : '—' );
 		echo ' · ΠΕ70 τμήματος: ' . esc_html( isset( $by_role['pe70'] ) ? implode( ', ', $by_role['pe70'] ) : '—' );
@@ -456,7 +485,7 @@ class SD_Workshops {
 		$actions = SD_Plans::year_actions( $class->year_id, $class->grade );
 		$map     = array();
 		foreach ( self::CYCLES as $c => $name ) {
-			$map[ $c ] = self::subtheme( $class->grade, $c );
+			$map[ $c ] = self::class_subtheme( $class, $c );
 		}
 
 		foreach ( $units as $n => $u ) {
@@ -501,7 +530,7 @@ class SD_Workshops {
 		}
 		echo '</select></label>';
 		echo '<label>Εβδομάδες (5–7) <input type="number" name="weeks" min="0" max="20" value="' . ( $u->weeks ? (int) $u->weeks : '' ) . '"></label></div>';
-		echo '<p class="sd-subtheme">Υποθεματική (από την τάξη): <strong data-subtheme-out>' . esc_html( $u->cycle ? self::subtheme( $class->grade, $u->cycle ) : '—' ) . '</strong></p>';
+		echo '<p class="sd-subtheme">Υποθεματική (αλλάζει στο Σχέδιο τμήματος): <strong data-subtheme-out>' . esc_html( $u->cycle ? self::class_subtheme( $class, $u->cycle ) : '—' ) . '</strong></p>';
 		echo '<label class="sd-block">Τίτλος προγράμματος <input name="title" value="' . esc_attr( $u->title ) . '"></label>';
 		echo '<fieldset class="sd-sub"><legend>Κύκλοι δεξιοτήτων</legend>';
 		$sel = '' === $u->skills ? array() : explode( ',', $u->skills );
@@ -554,7 +583,7 @@ class SD_Workshops {
 	private static function unit_view( $class, $u ) {
 		$rows = array(
 			'Θεματική ενότητα'    => $u->cycle ? self::CYCLES[ $u->cycle ] : '',
-			'Υποθεματική'         => $u->cycle ? self::subtheme( $class->grade, $u->cycle ) : '',
+			'Υποθεματική'         => $u->cycle ? self::class_subtheme( $class, $u->cycle ) : '',
 			'Τίτλος προγράμματος' => $u->title,
 			'Εβδομάδες'           => $u->weeks ? (string) $u->weeks : '',
 			'Κύκλοι δεξιοτήτων'   => self::skills_text( $u->skills ),
@@ -606,7 +635,7 @@ class SD_Workshops {
 				return $u->cycle ? self::CYCLES[ $u->cycle ] : '';
 			},
 			'Υποθεματική'            => function ( $u ) use ( $class ) {
-				return $u->cycle ? self::subtheme( $class->grade, $u->cycle ) : '';
+				return $u->cycle ? self::class_subtheme( $class, $u->cycle ) : '';
 			},
 			'Τίτλος προγράμματος'    => function ( $u ) {
 				return $u->title;
@@ -668,7 +697,7 @@ class SD_Workshops {
 				return $u->cycle ? self::CYCLES[ $u->cycle ] : '';
 			},
 			'Υποθεματική'                   => function ( $u ) use ( $class ) {
-				return $u->cycle ? self::subtheme( $class->grade, $u->cycle ) : '';
+				return $u->cycle ? self::class_subtheme( $class, $u->cycle ) : '';
 			},
 			'Τίτλος προγράμματος'           => function ( $u ) {
 				return $u->title;

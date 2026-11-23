@@ -105,7 +105,7 @@ class SD_Requests {
 	public static function missing( $r ) {
 		$m = array();
 		if ( 'A' === $r->part ) {
-			foreach ( array( 'destination' => 'προορισμός / φορέας', 'event_date' => 'ημερομηνία', 'purpose' => 'παιδαγωγικός σκοπός', 'prep' => 'παιδαγωγική προετοιμασία', 'assess' => 'τρόπος αξιολόγησης' ) as $f => $l ) {
+			foreach ( array( 'destination' => 'προορισμός / φορέας', 'event_date' => 'ημερομηνία', 'purpose' => 'παιδαγωγικός σκοπός' ) as $f => $l ) {
 				if ( '' === trim( (string) $r->$f ) ) {
 					$m[] = $l;
 				}
@@ -221,8 +221,6 @@ class SD_Requests {
 				'students_part'   => min( $part, $total ? $total : 99 ),
 				'escorts'         => self::text( 'escorts', 500 ),
 				'purpose'         => self::text( 'purpose' ),
-				'prep'            => self::text( 'prep' ),
-				'assess'          => self::text( 'assess' ),
 				'b_person'        => self::text( 'b_person', 255, false ),
 				'b_role'          => self::text( 'b_role', 255, false ),
 				'b_when'          => self::text( 'b_when', 255, false ),
@@ -403,7 +401,7 @@ class SD_Requests {
 
 		echo '<p><a href="' . esc_url( SD_Frontend::url( 'aitimata' ) ) . '">← Όλα τα αιτήματα</a>';
 		if ( $r ) {
-			echo ' · <a href="' . esc_url( SD_Frontend::url( 'aitimata', array( 'print' => $r->id ) ) ) . '">Εκτυπώσιμη μορφή</a> · <a href="' . esc_url( SD_Exports::url( 'f3', $r->id ) ) . '">Λήψη σε Word</a>';
+			echo ' · <a href="' . esc_url( SD_Frontend::url( 'aitimata', array( 'print' => $r->id ) ) ) . '">Εκτυπώσιμη μορφή</a> · ' . SD_Exports::links( 'f3', $r->id, 'Λήψη σε Word' ) . '';
 		}
 		echo '</p><h2>Έντυπο 3 · ' . ( $r ? esc_html( 'A' === $r->part ? $r->destination : $r->b_person ) : 'Νέο αίτημα' ) . '</h2>';
 		if ( $r ) {
@@ -452,6 +450,9 @@ class SD_Requests {
 		list( $deps, $plans ) = self::link_options( $r ? SD_Data::get_class( $r->class_id ) : $classes[0], $year );
 		$links = '' === $v( 'link_kinds' ) ? array() : explode( ',', $v( 'link_kinds' ) );
 		$part  = $v( 'part', 'A' );
+		if ( $r ) {
+			SD_AiField::mark( 'f3', $r->id );
+		}
 
 		echo '<form method="post" class="sd-form" data-sd-req>';
 		wp_nonce_field( SD_Frontend::NONCE );
@@ -482,7 +483,7 @@ class SD_Requests {
 		echo '<label class="sd-block">Ημερομηνία <input type="date" name="event_date" value="' . esc_attr( $v( 'event_date' ) ) . '"></label></section>';
 
 		// Μέρος Α
-		echo '<section class="sd-card" data-part="A"><h3>Μέρος Α · Εκπαιδευτική δράση εκτός σχολείου</h3><p class="sd-help">Απαιτείται απόφαση του Συλλόγου Διδασκόντων τουλάχιστον 5 ημέρες πριν και ορισμός υπεύθυνου/ης (άρθρα 13 και 14 της ΥΑ Φ.12/109328/Δ1/19-08-2026, Β΄ 5344). Προηγείται παιδαγωγική προετοιμασία και ακολουθεί αξιολόγηση (άρθρο 3 παρ. 4).</p>';
+		echo '<section class="sd-card" data-part="A"><h3>Μέρος Α · Εκπαιδευτική δράση εκτός σχολείου</h3><p class="sd-help">Απαιτείται απόφαση του Συλλόγου Διδασκόντων τουλάχιστον 5 ημέρες πριν και ορισμός υπεύθυνου/ης (άρθρα 13 και 14 της ΥΑ Φ.12/109328/Δ1/19-08-2026, Β΄ 5344).</p>';
 		echo '<fieldset><legend>Είδος</legend>';
 		foreach ( self::A_KINDS as $k => $l ) {
 			echo '<label class="sd-inline"><input type="radio" name="a_kind" value="' . esc_attr( $k ) . '"' . checked( $v( 'a_kind' ), $k, false ) . '> ' . esc_html( $l ) . '</label><br>';
@@ -502,9 +503,8 @@ class SD_Requests {
 		echo '</select></label><label>Άλλο μέσο <input name="transport_other" size="14" value="' . esc_attr( $v( 'transport_other' ) ) . '"></label></div>';
 		echo '<div class="sd-row"><label>Μαθητές τμήματος <input type="number" min="0" max="99" name="students_total" value="' . esc_attr( $v( 'students_total', '' ) ) . '"></label><label>Συμμετέχοντες <input type="number" min="0" max="99" name="students_part" value="' . esc_attr( $v( 'students_part', '' ) ) . '"></label></div>';
 		echo '<label class="sd-block">Συνοδοί εκπαιδευτικοί <input name="escorts" value="' . esc_attr( $v( 'escorts' ) ) . '"></label>';
-		echo '<label class="sd-block">Παιδαγωγικός σκοπός και σύνδεση με τη δράση <textarea name="purpose" rows="3">' . esc_textarea( $v( 'purpose' ) ) . '</textarea></label>';
-		echo '<label class="sd-block">Παιδαγωγική προετοιμασία (πριν) <textarea name="prep" rows="3">' . esc_textarea( $v( 'prep' ) ) . '</textarea></label>';
-		echo '<label class="sd-block">Τρόπος αξιολόγησης (μετά) <textarea name="assess" rows="3">' . esc_textarea( $v( 'assess' ) ) . '</textarea></label></section>';
+		echo '<label class="sd-block">Παιδαγωγικός σκοπός και σύνδεση με τη δράση' . ( $r ? '' : ' <span class="sd-meta">(το ✨ για πρόταση AI εμφανίζεται μετά την πρώτη αποθήκευση)</span>' ) . ' <textarea name="purpose" rows="4">' . esc_textarea( $v( 'purpose' ) ) . '</textarea></label>';
+		echo '</section>';
 
 		// Μέρος Β
 		echo '<section class="sd-card" data-part="B"><h3>Μέρος Β · Φορέας ή ομιλητής στο σχολείο</h3><p class="sd-help">Η παρουσία τρίτων κατά το διδακτικό ωράριο προϋποθέτει σύμφωνη γνώμη του Συλλόγου Διδασκόντων και ενημέρωση του/της Προϊσταμένου/ης Εκπαιδευτικών Θεμάτων (παρ. 12 άρθρου 16 π.δ. 79/2017). Ο/Η εκπαιδευτικός παραμένει στην τάξη και δεν δίνονται στοιχεία μαθητών.</p>';
@@ -565,8 +565,6 @@ class SD_Requests {
 				array( 'Μαθητές', 'Σύνολο τμήματος: ' . ( $r->students_total ? $r->students_total : '……' ) . ' · Συμμετέχοντες: ' . ( $r->students_part ? $r->students_part : '……' ) ),
 				array( 'Συνοδοί εκπαιδευτικοί', $r->escorts ),
 				array( 'Παιδαγωγικός σκοπός και σύνδεση με τη δράση', $r->purpose ),
-				array( 'Παιδαγωγική προετοιμασία (πριν)', $r->prep ),
-				array( 'Τρόπος αξιολόγησης (μετά)', $r->assess ),
 			);
 		} else {
 			$body = array(

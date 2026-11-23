@@ -32,7 +32,7 @@ class SD_AiField {
 		'gemini'  => array( 'Gemini', 'https://gemini.google.com/app' ),
 	);
 	/** Πεδία που δεν παίρνουν κουμπί (ονόματα προσώπων, σχόλια ελέγχου). */
-	const SKIP = array( 'review_note', 'visitor', 'ai_notes', 'escorts', 'b_person', 'b_role', 'place_card' );
+	const SKIP = array( 'review_note', 'visitor', 'ai_notes', 'escorts', 'b_person', 'b_role', 'b_when', 'b_topic', 'place_card' );
 
 	private static $marked = false;
 
@@ -269,10 +269,38 @@ class SD_AiField {
 		$out = array();
 		foreach ( SD_Workshops::units( SD_Workshops::form_of_class( $class->id ) ) as $n => $u ) {
 			if ( $u->cycle ) {
-				$out[] = SD_Workshops::UNITS[ $n ] . ': θεματική «' . SD_Workshops::CYCLES[ $u->cycle ] . '», υποθεματική «' . SD_Workshops::subtheme( $class->grade, $u->cycle ) . '»' . ( $u->title ? ', πρόγραμμα «' . $u->title . '»' : '' );
+				$out[] = SD_Workshops::UNITS[ $n ] . ': θεματική «' . SD_Workshops::CYCLES[ $u->cycle ] . '», υποθεματική «' . SD_Workshops::class_subtheme( $class, $u->cycle ) . '»' . ( $u->title ? ', πρόγραμμα «' . $u->title . '»' : '' );
 			}
 		}
 		return $out ? "\nΕργαστήρια Δεξιοτήτων της τάξης (Έντυπο 1Α):\n- " . implode( "\n- ", $out ) : '';
+	}
+
+	/**
+	 * Οι ενέργειες των Σχεδίων Δράσης εσωτερικής αξιολόγησης που αφορούν την τάξη,
+	 * ώστε οι προτάσεις για Εργαστήρια να τις υπηρετούν. Σημειώνονται όσες έχουν
+	 * ήδη συνδεθεί με ενότητα του 1Α.
+	 */
+	private static function plans_text( $class ) {
+		$linked = array();
+		foreach ( SD_Workshops::units( SD_Workshops::form_of_class( $class->id ) ) as $n => $u ) {
+			if ( $u->action_id ) {
+				$linked[ (int) $u->action_id ] = $n;
+			}
+		}
+		$out = array();
+		foreach ( SD_Plans::year_actions( $class->year_id, $class->grade ) as $row ) {
+			list( $p, $g, $a ) = $row;
+			$line  = '«' . $p->title . '» · στόχος: ' . mb_substr( $g->description, 0, 160 ) . ' · ενέργεια: ' . mb_substr( $a->description, 0, 220 );
+			$line .= isset( $linked[ (int) $a->id ] ) ? ' [συνδέεται ήδη με την ' . $linked[ (int) $a->id ] . 'η ενότητα]' : '';
+			$out[] = $line;
+			if ( count( $out ) >= 10 ) {
+				break;
+			}
+		}
+		if ( ! $out ) {
+			return '';
+		}
+		return "\nΣχέδια Δράσης εσωτερικής αξιολόγησης του σχολείου που αφορούν την τάξη (οι προτάσεις να τα υπηρετούν όπου ταιριάζει):\n- " . implode( "\n- ", $out );
 	}
 
 	/**
@@ -313,11 +341,26 @@ class SD_AiField {
 					'f4'   => 'Έντυπο 4 · αποτίμηση της χρονιάς (Εργαστήρια, Ενεργός Πολίτης, συμβολή στα Σχέδια Δράσης)',
 				);
 				$t  = self::school_line( $class ) . "\nΣυμπληρώνω: " . $names[ $type ] . '.';
-				$t .= self::units_text( $class );
+				$t .= self::units_text( $class ) . self::plans_text( $class );
 				foreach ( SD_Citizen::of_class( $class->id ) as $d ) {
 					$t .= "\nΔράση Ενεργού Πολίτη της τάξης: «" . $d->title . '»';
 				}
-				return array( $t . self::place( 2500 ), 'Τα Εργαστήρια Δεξιοτήτων έχουν 4 θεματικούς κύκλους· η τάξη δουλεύει την υποθεματική που ορίζει το πρόγραμμα σπουδών για την τάξη της.' );
+				return array( $t . self::place( 2500 ), 'Τα Εργαστήρια Δεξιοτήτων έχουν 4 θεματικούς κύκλους· σε κάθε κύκλο η τάξη δουλεύει την υποθεματική που φαίνεται παραπάνω.' );
+			case 'f3':
+				$r     = SD_Requests::get( $id );
+				$class = $r ? SD_Data::get_class( $r->class_id ) : null;
+				if ( ! $r || ! $class || ! SD_Requests::can_view( $class ) ) {
+					break;
+				}
+				list( $head, $body ) = SD_Requests::rows( $r, $class );
+				$t                   = self::school_line( $class ) . "\nΣυμπληρώνω το Έντυπο 3 · αίτημα " . ( 'A' === $r->part ? 'για εκπαιδευτική επίσκεψη εκτός σχολείου' : 'για φορέα ή ομιλητή στο σχολείο' ) . '.';
+				foreach ( array_merge( array_slice( $head, 2 ), $body ) as $kv ) {
+					if ( '' !== trim( (string) $kv[1] ) && false === strpos( $kv[0], 'σκοπός' ) && false === strpos( $kv[0], 'Συνοδοί' ) ) {
+						$t .= "\n" . $kv[0] . ': ' . $kv[1];
+					}
+				}
+				$t .= self::units_text( $class );
+				return array( $t . self::place( 1500 ), 'Γράψε σύντομα (3–5 προτάσεις) τι θα μάθουν τα παιδιά από την επίσκεψη και πώς δένει με τη δράση στην οποία εντάσσεται (Εργαστήρια, Ενεργός Πολίτης, Σχέδιο Δράσης, μάθημα). Χωρίς ονόματα μαθητών.' );
 			case 'sxsm':
 				$year = SD_Data::active_year();
 				if ( ! $year || ! current_user_can( SD_Roles::CAP_REVIEW ) ) {

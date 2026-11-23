@@ -14,8 +14,40 @@ class SD_Exports {
 		add_action( 'template_redirect', array( __CLASS__, 'download' ), 3 );
 	}
 
+	/** Προεπισκόπηση αντί για λήψη (ίδιος έλεγχος πρόσβασης). */
+	private static $preview = false;
+	private static $current = array( '', 0 );
+
 	public static function url( $type, $id ) {
 		return wp_nonce_url( add_query_arg( array( 'sd_export' => $type, 'id' => (int) $id ), SD_Install::app_url() ), 'sd_export_' . $type . '_' . (int) $id );
+	}
+
+	public static function preview_url( $type, $id ) {
+		return add_query_arg( 'provoli', 1, self::url( $type, $id ) );
+	}
+
+	/** «Προεπισκόπηση · Λήψη σε Word» για τη σελίδα του κάθε εντύπου. */
+	public static function links( $type, $id, $label = 'Λήψη σε Word' ) {
+		return '<a href="' . esc_url( self::preview_url( $type, $id ) ) . '">Προεπισκόπηση</a> · <a href="' . esc_url( self::url( $type, $id ) ) . '">' . esc_html( $label ) . '</a>';
+	}
+
+	/** Στέλνει το Word ή, στην προεπισκόπηση, το δείχνει ως σελίδα. */
+	private static function out( $filename, $blocks, $landscape = false, $pt = 10 ) {
+		if ( ! self::$preview ) {
+			SD_Office::send_docx( $filename, $blocks, $landscape, $pt );
+			return;
+		}
+		list( $type, $id ) = self::$current;
+		nocache_headers();
+		header( 'Content-Type: text/html; charset=utf-8' );
+		echo '<!doctype html><html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">';
+		echo '<title>Προεπισκόπηση · ' . esc_html( str_replace( '-', ' ', $filename ) ) . '</title>';
+		echo '<link rel="stylesheet" href="' . esc_url( SD_URL . 'assets/sd.css?ver=' . SD_VERSION ) . '">';
+		echo '<style>body{margin:0;background:#eef2f1}.sd-preview{max-width:' . ( $landscape ? '1100' : '820' ) . 'px;margin:0 auto;padding:16px}.sd-preview .sd-print{background:#fff;padding:24px 28px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12)}.sd-preview-bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 0;background:#eef2f1}@media print{body{background:#fff}.sd-preview{max-width:none;padding:0}.sd-preview .sd-print{box-shadow:none;padding:0}' . ( $landscape ? '@page{size:landscape}' : '' ) . '}</style></head><body>';
+		echo '<div class="sd-app sd-preview"><div class="sd-preview-bar sd-noprint"><button class="sd-button sd-quiet" type="button" onclick="history.length>1?history.back():window.close()">← Πίσω</button> <a class="sd-button" href="' . esc_url( self::url( $type, $id ) ) . '">Λήψη σε Word</a> <button class="sd-button" type="button" onclick="window.print()">Εκτύπωση / PDF</button> <span class="sd-help">Προεπισκόπηση: έτσι θα βγει το έντυπο' . ( $landscape ? ' (οριζόντια σελίδα)' : '' ) . '.</span></div><div class="sd-print">';
+		self::print_blocks( $blocks );
+		echo '</div></div></body></html>';
+		exit;
 	}
 
 	private static function slug( $s ) {
@@ -27,8 +59,10 @@ class SD_Exports {
 		if ( empty( $_GET['sd_export'] ) ) {
 			return;
 		}
-		$type = sanitize_key( wp_unslash( $_GET['sd_export'] ) );
-		$id   = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
+		$type          = sanitize_key( wp_unslash( $_GET['sd_export'] ) );
+		$id            = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
+		self::$preview = ! empty( $_GET['provoli'] ) && 'xlsx' !== $type;
+		self::$current = array( $type, $id );
 		if ( ! is_user_logged_in() || ! current_user_can( SD_Roles::CAP_ACCESS ) || ! wp_verify_nonce( isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '', 'sd_export_' . $type . '_' . $id ) ) {
 			wp_die( 'Η λήψη δεν επιτρέπεται.', 403 );
 		}
@@ -44,7 +78,7 @@ class SD_Exports {
 				if ( ! $class || ! SD_Workshops::can_view( $class ) ) {
 					$deny();
 				}
-				SD_Office::send_docx( self::slug( 'Εντυπο-1Α-' . SD_Data::class_label( $class ) . '-' . $y ), SD_Workshops::doc_blocks( $class ), true );
+				self::out( self::slug( 'Εντυπο-1Α-' . SD_Data::class_label( $class ) . '-' . $y ), SD_Workshops::doc_blocks( $class ), true );
 				break;
 			case 'f2':
 				$dep   = SD_Citizen::get( $id );
@@ -52,7 +86,7 @@ class SD_Exports {
 				if ( ! $class || ! SD_Citizen::can_view( $class ) ) {
 					$deny();
 				}
-				SD_Office::send_docx( self::slug( 'Εντυπο-2-' . SD_Data::class_label( $class ) . '-' . $dep->title ), SD_Citizen::doc_blocks( $dep ) );
+				self::out( self::slug( 'Εντυπο-2-' . SD_Data::class_label( $class ) . '-' . $dep->title ), SD_Citizen::doc_blocks( $dep ) );
 				break;
 			case 'f2p':
 				$dep   = SD_Citizen::get( $id );
@@ -60,7 +94,7 @@ class SD_Exports {
 				if ( ! $class || ! SD_Citizen::can_view( $class ) ) {
 					$deny();
 				}
-				SD_Office::send_docx( self::slug( 'Προτυπο-Δρασης-' . SD_Data::class_label( $class ) . '-' . $dep->title ), SD_Citizen::proto_blocks( $dep ) );
+				self::out( self::slug( 'Προτυπο-Δρασης-' . SD_Data::class_label( $class ) . '-' . $dep->title ), SD_Citizen::proto_blocks( $dep ) );
 				break;
 			case 'prog':
 			case 'sxtm':
@@ -69,9 +103,9 @@ class SD_Exports {
 					$deny();
 				}
 				if ( 'prog' === $type ) {
-					SD_Office::send_docx( self::slug( 'Προγραμματισμος-Εκπαιδευτικων-' . SD_Data::class_label( $class ) . '-' . $y ), SD_ErgPlan::programming_blocks( $class ) );
+					self::out( self::slug( 'Προγραμματισμος-Εκπαιδευτικων-' . SD_Data::class_label( $class ) . '-' . $y ), SD_ErgPlan::programming_blocks( $class ) );
 				}
-				SD_Office::send_docx( self::slug( 'Σχεδιο-Δρασης-Τμηματος-' . SD_Data::class_label( $class ) . '-' . $y ), SD_ErgPlan::class_blocks( $class ) );
+				self::out( self::slug( 'Σχεδιο-Δρασης-Τμηματος-' . SD_Data::class_label( $class ) . '-' . $y ), SD_ErgPlan::class_blocks( $class ) );
 				break;
 			case 'progall':
 				if ( ! $year || ! current_user_can( SD_Roles::CAP_REVIEW ) ) {
@@ -79,12 +113,12 @@ class SD_Exports {
 				}
 				$rows = SD_ErgPlan::programming_sheet( $year );
 				$head = array_shift( $rows );
-				SD_Office::send_docx(
+				self::out(
 					self::slug( 'Προγραμματισμος-Εκπαιδευτικων-' . $y ),
 					array(
 						array( 'p', SD_Frontend::school_name(), true ),
 						array( 'title', 'Προγραμματισμός Εκπαιδευτικών · Εργαστήρια Δεξιοτήτων ' . $y ),
-						array( 'table', $head, $rows, array( 0.08, 0.22, 0.24, 0.3, 0.16 ) ),
+						array( 'table', $head, $rows, array( 0.07, 0.2, 0.17, 0.2, 0.24, 0.12 ) ),
 					),
 					true
 				);
@@ -93,10 +127,10 @@ class SD_Exports {
 				if ( ! $year || ! current_user_can( SD_Roles::CAP_REVIEW ) ) {
 					$deny();
 				}
-				SD_Office::send_docx( self::slug( 'Σχεδιο-Δρασης-Σχολικης-Μοναδας-Εργαστηρια-' . $y ), SD_ErgPlan::school_blocks( $year ) );
+				self::out( self::slug( 'Σχεδιο-Δρασης-Σχολικης-Μοναδας-Εργαστηρια-' . $y ), SD_ErgPlan::school_blocks( $year ) );
 				break;
 			case 'odigos':
-				SD_Office::send_docx( self::slug( 'Οδηγος-Σχολικες-Δρασεις' ), SD_Guide::doc_blocks( 1 === $id ), false, 12 );
+				self::out( self::slug( 'Οδηγος-Σχολικες-Δρασεις' ), SD_Guide::doc_blocks( 1 === $id ), false, 12 );
 				break;
 			case 'symvoulos':
 				if ( ! $year || ! current_user_can( SD_Roles::CAP_REVIEW ) ) {
@@ -106,7 +140,7 @@ class SD_Exports {
 				$head = array_shift( $rows );
 				$ms   = self::myschool_rows( $year );
 				$mh   = array_shift( $ms );
-				SD_Office::send_docx(
+				self::out(
 					self::slug( 'Δρασεις-Ενεργου-Πολιτη-για-Συμβουλο-' . $y ),
 					array(
 						array( 'p', SD_Frontend::school_name(), true ),
@@ -125,14 +159,14 @@ class SD_Exports {
 				if ( ! $class || ! SD_Requests::can_view( $class ) ) {
 					$deny();
 				}
-				SD_Office::send_docx( self::slug( 'Εντυπο-3-' . SD_Data::class_label( $class ) . '-' . ( $r->event_date ? $r->event_date : 'αιτημα' ) ), SD_Requests::doc_blocks( $r ) );
+				self::out( self::slug( 'Εντυπο-3-' . SD_Data::class_label( $class ) . '-' . ( $r->event_date ? $r->event_date : 'αιτημα' ) ), SD_Requests::doc_blocks( $r ) );
 				break;
 			case 'f4':
 				$class = SD_Data::get_class( $id );
 				if ( ! $class || ! SD_F4::can_view( $class ) ) {
 					$deny();
 				}
-				SD_Office::send_docx( self::slug( 'Εντυπο-4-' . SD_Data::class_label( $class ) . '-' . $y ), SD_F4::doc_blocks( $class ) );
+				self::out( self::slug( 'Εντυπο-4-' . SD_Data::class_label( $class ) . '-' . $y ), SD_F4::doc_blocks( $class ) );
 				break;
 			case 'sd':
 				$plan = SD_Plans::get_plan( $id );
@@ -140,7 +174,7 @@ class SD_Exports {
 					$deny();
 				}
 				$rows = SD_F4::plan_rows( $plan );
-				SD_Office::send_docx(
+				self::out(
 					self::slug( 'Αποτιμηση-' . $plan->code . '-' . $y ),
 					array(
 						array( 'p', SD_Frontend::school_name(), true ),
@@ -156,7 +190,7 @@ class SD_Exports {
 				if ( ! $plan ) {
 					$deny();
 				}
-				SD_Office::send_docx( self::slug( 'Σχεδιο-Δρασης-' . $plan->code . '-' . $y ), SD_Plans::doc_blocks( $plan ) );
+				self::out( self::slug( 'Σχεδιο-Δρασης-' . $plan->code . '-' . $y ), SD_Plans::doc_blocks( $plan ) );
 				break;
 			case 'xlsx':
 				if ( ! $year || ! current_user_can( SD_Roles::CAP_REVIEW ) ) {
@@ -180,7 +214,7 @@ class SD_Exports {
 					$form ? SD_Workshops::STATUS[ $form->status ] : 'Δεν έχει ξεκινήσει',
 					SD_Workshops::UNITS[ $n ] ?? (string) $n,
 					$u->cycle ? SD_Workshops::CYCLES[ $u->cycle ] : '',
-					$u->cycle ? SD_Workshops::subtheme( $c->grade, $u->cycle ) : '',
+					$u->cycle ? SD_Workshops::class_subtheme( $c, $u->cycle ) : '',
 					$u->title,
 					(int) $u->weeks,
 					(int) $u->citizen_hours,
@@ -313,42 +347,20 @@ class SD_Exports {
 		echo '<section class="sd-card"><h3>Όλοι οι πίνακες της χρονιάς σε Excel</h3><p>Ένα αρχείο με φύλλα για: Έντυπα 1Α, Δράσεις Ενεργού Πολίτη, Επισκέψεις (Έντυπο 3), myschool και Συμβολή στα ΣΔ (Έντυπο 4), Σημεία χάρτη.</p>';
 		echo '<p><a class="sd-button" href="' . esc_url( self::url( 'xlsx', 0 ) ) . '">Λήψη Excel ' . esc_html( $year->label ) . '</a></p></section>';
 		echo '<section class="sd-card"><h3>Δράσεις Ενεργού Πολίτη για τον Σύμβουλο και το myschool</h3><p>Συνολικός πίνακας (θεματική ΣΒΑ, τίτλος, τάξη, περίοδος) και ο πίνακας του myschool (δράση, στόχοι, τάξη), σε ένα Word. Οι ίδιοι πίνακες είναι και στα πρώτα φύλλα του Excel.</p>';
-		echo '<p><a class="sd-button" href="' . esc_url( self::url( 'symvoulos', 0 ) ) . '">Λήψη Word για τον Σύμβουλο</a></p></section>';
+		echo '<p><a class="sd-button sd-quiet" href="' . esc_url( self::preview_url( 'symvoulos', 0 ) ) . '">Προεπισκόπηση</a> <a class="sd-button" href="' . esc_url( self::url( 'symvoulos', 0 ) ) . '">Λήψη Word για τον Σύμβουλο</a></p></section>';
 
-		echo '<section class="sd-card"><h3>Έντυπα σε Word, ανά τμήμα</h3><table class="sd-table"><thead><tr><th>Τμήμα</th><th>Έντυπο 1Α</th><th>Έντυπα 2</th><th>Έντυπα 3</th><th>Έντυπο 4</th></tr></thead><tbody>';
-		$reqs = array();
-		foreach ( SD_Requests::of_year( $year->id ) as $r ) {
-			$reqs[ (int) $r->class_id ][] = $r;
-		}
-		foreach ( SD_Data::classes( $year->id ) as $c ) {
-			echo '<tr><td><strong>' . esc_html( SD_Data::class_label( $c ) ) . '</strong></td>';
-			echo '<td>' . ( SD_Workshops::form_of_class( $c->id ) ? '<a href="' . esc_url( self::url( 'f1a', $c->id ) ) . '">Word</a>' : '—' ) . '</td><td>';
-			foreach ( SD_Citizen::of_class( $c->id ) as $d ) {
-				echo '<a href="' . esc_url( self::url( 'f2', $d->id ) ) . '">' . esc_html( wp_html_excerpt( $d->title, 30, '…' ) ) . '</a><br>';
-			}
-			echo '</td><td>';
-			foreach ( $reqs[ (int) $c->id ] ?? array() as $r ) {
-				echo '<a href="' . esc_url( self::url( 'f3', $r->id ) ) . '">' . esc_html( ( $r->event_date ? mysql2date( 'd/m', $r->event_date ) . ' ' : '' ) . wp_html_excerpt( 'A' === $r->part ? $r->destination : $r->b_person, 24, '…' ) ) . '</a><br>';
-			}
-			echo '</td><td>' . ( SD_F4::form_of_class( $c->id ) ? '<a href="' . esc_url( self::url( 'f4', $c->id ) ) . '">Word</a>' : '—' ) . '</td></tr>';
-		}
-		echo '</tbody></table></section>';
-
-		echo '<section class="sd-card"><h3>Εργαστήρια Δεξιοτήτων (υποδείγματα Πλατφόρμας 21+)</h3><ul>';
-		echo '<li><a href="' . esc_url( self::url( 'sxsm', 0 ) ) . '">Σχέδιο Δράσης Σχολικής Μονάδας</a> · <a href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxolio' => 1 ) ) ) . '">συμπλήρωση</a></li>';
-		echo '<li><a href="' . esc_url( self::url( 'progall', 0 ) ) . '">Προγραμματισμός Εκπαιδευτικών, όλα τα τμήματα</a></li>';
-		foreach ( SD_Data::classes( $year->id ) as $c ) {
-			echo '<li>Τμήμα ' . esc_html( SD_Data::class_label( $c ) ) . ': <a href="' . esc_url( self::url( 'sxtm', $c->id ) ) . '">Σχέδιο Δράσης Τμήματος</a> · <a href="' . esc_url( self::url( 'prog', $c->id ) ) . '">Προγραμματισμός</a></li>';
-		}
-		echo '</ul></section>';
+		echo '<section class="sd-card"><h3>Εργαστήρια Δεξιοτήτων · για όλο το σχολείο</h3><ul>';
+		echo '<li>Σχέδιο Δράσης Σχολικής Μονάδας: ' . self::links( 'sxsm', 0 ) . ' · <a href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxolio' => 1 ) ) ) . '">συμπλήρωση</a></li>';
+		echo '<li>Προγραμματισμός Εκπαιδευτικών, όλα τα τμήματα: ' . self::links( 'progall', 0 ) . '</li>';
+		echo '</ul><p class="sd-help">Τα έντυπα κάθε τμήματος (1Α, 2, 3, 4, Σχέδιο τμήματος) εξάγονται από τη σελίδα του κάθε εντύπου, με προεπισκόπηση πριν από τη λήψη.</p></section>';
 		echo '<section class="sd-card"><h3>Σχέδια Δράσης εσωτερικής αξιολόγησης (Δομικά στοιχεία και Στοχοθεσία)</h3><ul>';
 		foreach ( SD_Plans::plans( $year->id ) as $p ) {
-			echo '<li><a href="' . esc_url( self::url( 'plan', $p->id ) ) . '">' . esc_html( trim( $p->code . ' ' . $p->title ) ) . '</a></li>';
+			echo '<li>' . esc_html( trim( $p->code . ' ' . $p->title ) ) . ': ' . self::links( 'plan', $p->id ) . '</li>';
 		}
 		echo '</ul></section>';
 		echo '<section class="sd-card"><h3>Αποτίμηση Σχεδίων Δράσης σε Word</h3><ul>';
 		foreach ( SD_Plans::plans( $year->id ) as $p ) {
-			echo '<li><a href="' . esc_url( self::url( 'sd', $p->id ) ) . '">' . esc_html( trim( $p->code . ' ' . $p->title ) ) . '</a></li>';
+			echo '<li>' . esc_html( trim( $p->code . ' ' . $p->title ) ) . ': ' . self::links( 'sd', $p->id ) . '</li>';
 		}
 		echo '</ul></section>';
 	}

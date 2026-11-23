@@ -64,7 +64,7 @@ class SD_Ai {
 			$units = SD_Workshops::units( SD_Workshops::form_of_class( $class->id ) );
 			$u     = $units[ (int) $dep->f1a_unit ] ?? null;
 			if ( $u && $u->cycle ) {
-				$lines[] = '- Συνδέεται με το Εργαστήριο Δεξιοτήτων της τάξης: θεματική «' . SD_Workshops::CYCLES[ $u->cycle ] . '», υποθεματική «' . SD_Workshops::subtheme( $class->grade, $u->cycle ) . '»' . ( $u->title ? ', πρόγραμμα «' . $u->title . '»' : '' ) . '.';
+				$lines[] = '- Συνδέεται με το Εργαστήριο Δεξιοτήτων της τάξης: θεματική «' . SD_Workshops::CYCLES[ $u->cycle ] . '», υποθεματική «' . SD_Workshops::class_subtheme( $class, $u->cycle ) . '»' . ( $u->title ? ', πρόγραμμα «' . $u->title . '»' : '' ) . '.';
 			}
 		}
 		if ( $dep->kepea ) {

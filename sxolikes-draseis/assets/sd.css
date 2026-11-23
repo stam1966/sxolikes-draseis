@@ -429,3 +429,16 @@ details.sd-guide > summary { cursor: pointer; font-weight: 700; color: var(--sd-
 
 /* Μετρητής εκκρεμών ελέγχων στο μενού */
 .sd-nav-count { display: inline-block; min-width: 1.25rem; padding: 0 .35rem; margin-left: .3rem; border-radius: 999px; background: #b3261e; color: #fff; font-size: .75rem; font-weight: 700; line-height: 1.25rem; text-align: center; }
+
+/* 0.15.0 · Προγραμματισμός, ακορντεόν θεματικών κύκλων */
+.sd-table-wrap { overflow-x: auto; }
+.sd-prog h3 { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+details.sd-acc { padding: 0; }
+details.sd-acc > summary { cursor: pointer; list-style: none; padding: .9rem 1.1rem; display: flex; flex-wrap: wrap; gap: .25rem .75rem; align-items: baseline; }
+details.sd-acc > summary::-webkit-details-marker { display: none; }
+details.sd-acc > summary::before { content: "▸"; color: var(--sd-accent); transition: transform .15s; display: inline-block; }
+details.sd-acc[open] > summary::before { transform: rotate(90deg); }
+details.sd-acc > summary .sd-acc-title { font-weight: 700; font-size: 1.05rem; }
+details.sd-acc[open] > summary { border-bottom: 1px solid var(--sd-line); margin-bottom: .75rem; }
+details.sd-acc > :not(summary) { margin-left: 1.1rem; margin-right: 1.1rem; }
+details.sd-acc > :last-child { margin-bottom: 1rem; }

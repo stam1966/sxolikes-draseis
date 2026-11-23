@@ -335,7 +335,7 @@ class SD_Frontend {
 		echo '<nav class="sd-nav" aria-label="Μενού εφαρμογής"><details class="sd-nav-toggle"><summary><span class="sd-burger" aria-hidden="true"></span> Μενού · <strong>' . esc_html( $title ) . '</strong></summary></details>';
 		echo '<ul class="sd-nav-main">' . $main; // phpcs:ignore WordPress.Security.EscapeOutput
 		if ( $admin ) {
-			echo '<li class="sd-nav-admin"><details' . ( $in_admin ? ' open' : '' ) . '><summary' . ( $in_admin ? ' aria-current="true"' : '' ) . '>Διαχείριση</summary><ul>' . $admin . '</ul></details></li>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			echo '<li class="sd-nav-admin"><details><summary' . ( $in_admin ? ' aria-current="true"' : '' ) . '>Διαχείριση</summary><ul>' . $admin . '</ul></details></li>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		}
 		echo '</ul><div class="sd-who">';
 		echo esc_html( $user->display_name );

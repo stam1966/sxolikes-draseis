@@ -606,7 +606,7 @@ class SD_Plans {
 			SD_AiField::mark( 'plan', $plan->id );
 		}
 
-		echo '<p><a href="' . esc_url( SD_Frontend::url( 'sxedia' ) ) . '">← Όλα τα σχέδια</a> · <a href="' . esc_url( SD_Frontend::url( 'sxedia', array( 'copy' => $plan->id ) ) ) . '">Κείμενα για την πλατφόρμα</a> · <a href="' . esc_url( SD_Exports::url( 'plan', $plan->id ) ) . '">Λήψη σε Word</a>' . ( $edit ? ' · <a href="' . esc_url( SD_Frontend::url( 'sxedia', array( 'eisagogi' => $plan->id ) ) ) . '">Εισαγωγή από την πλατφόρμα</a>' : '' ) . '</p>';
+		echo '<p><a href="' . esc_url( SD_Frontend::url( 'sxedia' ) ) . '">← Όλα τα σχέδια</a> · <a href="' . esc_url( SD_Frontend::url( 'sxedia', array( 'copy' => $plan->id ) ) ) . '">Κείμενα για την πλατφόρμα</a> · ' . SD_Exports::links( 'plan', $plan->id, 'Λήψη σε Word' ) . '' . ( $edit ? ' · <a href="' . esc_url( SD_Frontend::url( 'sxedia', array( 'eisagogi' => $plan->id ) ) ) . '">Εισαγωγή από την πλατφόρμα</a>' : '' ) . '</p>';
 		echo '<h2>' . esc_html( trim( $plan->code . ' ' . $plan->title ) ) . '</h2>';
 		echo '<p class="sd-meta">' . esc_html( SD_Eval::function_label( $plan->axis ) ) . ' · Άξονας ' . (int) $plan->axis . ': ' . esc_html( SD_Eval::axis_label( $plan->axis ) ) . '</p>';
 

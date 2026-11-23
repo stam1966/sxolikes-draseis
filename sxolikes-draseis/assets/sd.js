@@ -169,7 +169,7 @@
 		return ( name || '' ).replace( /\[.*$/, '' );
 	}
 	function skipped( el ) {
-		return ! el.name || cfg.skip.indexOf( baseName( el.name ) ) !== -1;
+		return ! el.name || el.hasAttribute( 'data-noai' ) || cfg.skip.indexOf( baseName( el.name ) ) !== -1;
 	}
 	// Η ετικέτα ενός πεδίου: το κείμενο του <label> χωρίς το ίδιο το πεδίο, ή η επικεφαλίδα της γραμμής πίνακα.
 	function labelOf( el ) {
@@ -439,5 +439,41 @@
 			}
 			run( el, panel );
 		} );
+	} );
+}() );
+// Ακορντεόν και μενού κορυφής.
+( function () {
+	'use strict';
+
+	// Ανοίγει ένας θεματικός κύκλος, κλείνουν οι άλλοι (και σε browser χωρίς <details name>).
+	var acc = document.querySelectorAll( 'details[data-accordion]' );
+	acc.forEach( function ( det ) {
+		det.addEventListener( 'toggle', function () {
+			if ( det.open ) {
+				acc.forEach( function ( o ) {
+					if ( o !== det && o.open ) {
+						o.open = false;
+					}
+				} );
+			}
+		} );
+	} );
+
+	// Τα μενού της κορυφής κλείνουν με κλικ έξω από αυτά ή με Esc.
+	var menus = document.querySelectorAll( '.sd-nav details' );
+	function closeOutside( target ) {
+		menus.forEach( function ( d ) {
+			if ( d.open && ! d.contains( target ) && ! ( d.classList.contains( 'sd-nav-toggle' ) && target && target.closest && target.closest( '.sd-nav' ) ) ) {
+				d.open = false;
+			}
+		} );
+	}
+	document.addEventListener( 'click', function ( e ) {
+		closeOutside( e.target );
+	} );
+	document.addEventListener( 'keydown', function ( e ) {
+		if ( 'Escape' === e.key ) {
+			closeOutside( null );
+		}
 	} );
 }() );

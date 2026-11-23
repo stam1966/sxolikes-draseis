@@ -18,8 +18,9 @@ class SD_ErgPlan {
 	const ORIENTATION = "Βασική αρχή του ετήσιου Σχεδίου Δράσης των Εργαστηρίων Δεξιοτήτων είναι να συνδυάζουν το γνωστικό πεδίο των Προγραμμάτων Σπουδών με την ανάπτυξη βασικών ικανοτήτων των μαθητριών και των μαθητών με σκοπό τη διάπλασή τους σε ελεύθερους και υπεύθυνους πολίτες. Σκοπός μας είναι η ενίσχυση της καλλιέργειας ήπιων δεξιοτήτων, δεξιοτήτων ζωής και δεξιοτήτων τεχνολογίας και επιστήμης στις μαθήτριες και στους μαθητές της τάξης μας.";
 
 	const CLASS_FIELDS = array(
-		'iep_title'   => 'Τίτλος/τίτλοι προγραμμάτων (από την πλατφόρμα του ΙΕΠ)',
+		'iep_title'   => 'Τίτλος προγράμματος στην πλατφόρμα του ΙΕΠ (αν υπάρχει)',
 		'our_title'   => 'Ο δικός μας τίτλος',
+		'teachers'    => 'Άλλοι/ες εκπαιδευτικοί που υλοποιούν εργαστήρια του κύκλου (ένας/μία ανά γραμμή, π.χ. «Ονοματεπώνυμο, ΠΕ86»)',
 		'goals'       => 'Στόχοι Σχεδίου Δράσης (δεξιότητες, στόχοι θεματικού κύκλου, σύνδεση με τα μαθήματα)',
 		'sequence'    => 'Ακολουθία εργαστηρίων (μία γραμμή ανά εργαστήριο, έως 7)',
 		'adaptations' => 'Προσαρμογές για τη συμμετοχή και την ένταξη όλων των μαθητών/τριών',
@@ -88,6 +89,7 @@ class SD_ErgPlan {
 			$f   = $f4 ? ( $f4->cycles_arr[ $c ] ?? array() ) : array();
 			$pre = array(
 				'iep_title'   => '',
+				'teachers'    => '',
 				'our_title'   => $u ? $u->title : '',
 				'goals'       => $u ? $u->goals : '',
 				'sequence'    => $u ? $u->activities : '',
@@ -99,6 +101,7 @@ class SD_ErgPlan {
 				'diffusion'   => '',
 			);
 			$val = $saved[ $c ] ?? array();
+			$val['subtheme'] = SD_Workshops::class_subtheme_id( $class, $c );
 			foreach ( $pre as $k => $v ) {
 				if ( ! isset( $val[ $k ] ) || '' === trim( (string) $val[ $k ] ) ) {
 					$val[ $k ] = (string) $v;
@@ -130,8 +133,13 @@ class SD_ErgPlan {
 					$teachers[ (int) $t->user_id ] = true;
 				}
 			}
+			foreach ( self::cycle_values( $c ) as $v ) {
+				foreach ( self::extra_teachers( $v['teachers'] ?? '' ) as $n ) {
+					$teachers[ 'x' . mb_strtolower( $n ) ] = true;
+				}
+			}
 			foreach ( self::unit_by_cycle( $c ) as $cy => $u ) {
-				$id = SD_Workshops::GRADE_SUBTHEMES[ (int) $c->grade ][ $cy ] ?? '';
+				$id = SD_Workshops::class_subtheme_id( $c, $cy );
 				if ( $id ) {
 					$used[ $id ][] = SD_Data::class_label( $c );
 				}
@@ -193,6 +201,8 @@ class SD_ErgPlan {
 			foreach ( array_keys( self::CLASS_FIELDS ) as $k ) {
 				$cycles[ $c ][ $k ] = self::clean( $post['cy'][ $c ][ $k ] ?? '' );
 			}
+			$sub                      = sanitize_text_field( (string) ( $post['cy'][ $c ]['subtheme'] ?? '' ) );
+			$cycles[ $c ]['subtheme'] = isset( SD_Workshops::cycle_subthemes( $c )[ $sub ] ) ? $sub : '';
 		}
 		$data = array(
 			'year_id'     => (int) $class->year_id,
@@ -227,7 +237,7 @@ class SD_ErgPlan {
 			SD_AiField::mark( 'sxtm', $class->id );
 		}
 
-		echo '<p><a href="' . esc_url( SD_Frontend::url( 'ergastiria' ) ) . '">← Εργαστήρια</a> · <a href="' . esc_url( SD_Exports::url( 'sxtm', $class->id ) ) . '">Λήψη σε Word</a> · <a href="' . esc_url( SD_Exports::url( 'prog', $class->id ) ) . '">Προγραμματισμός Εκπαιδευτικών (Word)</a></p>';
+		echo '<p><a href="' . esc_url( SD_Frontend::url( 'ergastiria' ) ) . '">← Εργαστήρια</a> · Σχέδιο τμήματος: ' . SD_Exports::links( 'sxtm', $class->id, 'Word' ) . ' · Προγραμματισμός Εκπαιδευτικών: ' . SD_Exports::links( 'prog', $class->id, 'Word' ) . '</p>';
 		echo '<h2>Σχέδιο Δράσης του Τμήματος ' . esc_html( SD_Data::class_label( $class ) ) . ' · Εργαστήρια Δεξιοτήτων</h2>';
 		echo '<p class="sd-help">Υπόδειγμα της Πλατφόρμας 21+. Τα πεδία προσυμπληρώθηκαν από το Έντυπο 1Α και, στο τέλος της χρονιάς, από το Έντυπο 4. Το συμπληρώνετε όποτε θέλετε· δεν κλειδώνει και δεν επηρεάζει το 1Α.</p>';
 
@@ -236,13 +246,27 @@ class SD_ErgPlan {
 		echo '<input type="hidden" name="sd_do" value="ergplan_save"><input type="hidden" name="class_id" value="' . (int) $class->id . '">';
 		echo '<section class="sd-card"><label class="sd-block">Αριθμός μαθητών <input type="number" min="0" max="99" name="students" value="' . esc_attr( $plan ? (string) $plan->students : '' ) . '"' . $dis . ' style="width:6em"></label>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<label class="sd-block">Βασικός προσανατολισμός του ετήσιου Σχεδίου Δράσης<textarea name="orientation" rows="5"' . $dis . '>' . esc_textarea( $plan && '' !== $plan->orientation ? $plan->orientation : self::ORIENTATION ) . '</textarea></label></section>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		echo '<p class="sd-help">Πατήστε σε έναν θεματικό κύκλο για να ανοίξει· ο προηγούμενος κλείνει. Ό,τι γράψατε σε κλειστό κύκλο αποθηκεύεται κανονικά.</p>';
+		$first = true;
 		foreach ( SD_Workshops::CYCLES as $c => $label ) {
-			echo '<section class="sd-card"><h3>Θεματικός κύκλος: ' . esc_html( $label ) . '</h3><p class="sd-meta">' . esc_html( SD_Workshops::subtheme( $class->grade, $c ) ) . '</p>';
-			foreach ( self::CLASS_FIELDS as $k => $l ) {
-				$rows = in_array( $k, array( 'iep_title', 'our_title' ), true ) ? 1 : 3;
-				echo '<label class="sd-block">' . esc_html( $l ) . '<textarea rows="' . ( 'sequence' === $k ? 7 : $rows ) . '" name="cy[' . (int) $c . '][' . esc_attr( $k ) . ']"' . $dis . '>' . esc_textarea( $vals[ $c ][ $k ] ?? '' ) . '</textarea></label>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			$name = 'cy[' . (int) $c . ']';
+			echo '<details class="sd-card sd-acc" name="sd-kyklos" data-accordion' . ( $first ? ' open' : '' ) . '><summary><span class="sd-acc-title">Θεματικός κύκλος: ' . esc_html( $label ) . '</span> <span class="sd-meta">' . esc_html( SD_Workshops::class_subtheme( $class, $c ) ) . '</span></summary>';
+			$first = false;
+			echo '<label class="sd-block">Υποθεματική <select name="' . esc_attr( $name ) . '[subtheme]"' . $dis . '>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			foreach ( SD_Workshops::cycle_subthemes( $c ) as $id => $l ) {
+				echo '<option value="' . esc_attr( $id ) . '"' . selected( $vals[ $c ]['subtheme'], $id, false ) . '>' . esc_html( $l ) . '</option>';
 			}
-			echo '</section>';
+			echo '</select></label>';
+			foreach ( self::CLASS_FIELDS as $k => $l ) {
+				$field = $name . '[' . $k . ']';
+				if ( in_array( $k, array( 'iep_title', 'our_title' ), true ) ) {
+					echo '<label class="sd-block">' . esc_html( $l ) . '<input type="text" name="' . esc_attr( $field ) . '" value="' . esc_attr( $vals[ $c ][ $k ] ?? '' ) . '"' . $dis . '></label>'; // phpcs:ignore WordPress.Security.EscapeOutput
+					continue;
+				}
+				$rows = 'sequence' === $k ? 7 : ( 'teachers' === $k ? 2 : 3 );
+				echo '<label class="sd-block">' . esc_html( $l ) . '<textarea rows="' . (int) $rows . '" name="' . esc_attr( $field ) . '"' . ( 'teachers' === $k ? ' data-noai' : '' ) . $dis . '>' . esc_textarea( $vals[ $c ][ $k ] ?? '' ) . '</textarea></label>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			}
+			echo '</details>';
 		}
 		if ( $edit ) {
 			echo '<p><button class="sd-button" type="submit">Αποθήκευση</button></p>';
@@ -263,7 +287,7 @@ class SD_ErgPlan {
 		}
 		$edit  = current_user_can( SD_Roles::CAP_MANAGE );
 		$dis   = $edit ? '' : ' disabled';
-		echo '<p><a href="' . esc_url( SD_Frontend::url( 'ergastiria' ) ) . '">← Εργαστήρια</a> · <a href="' . esc_url( SD_Exports::url( 'sxsm', 0 ) ) . '">Λήψη σε Word</a></p>';
+		echo '<p><a href="' . esc_url( SD_Frontend::url( 'ergastiria' ) ) . '">← Εργαστήρια</a> · ' . SD_Exports::links( 'sxsm', 0, 'Λήψη σε Word' ) . '</p>';
 		echo '<h2>Σχέδιο Δράσης της Σχολικής Μονάδας · Εργαστήρια Δεξιοτήτων ' . esc_html( $year->label ) . '</h2>';
 		echo '<p class="sd-help">Τμήματα και εκπαιδευτικοί Εργαστηρίων συμπληρώνονται αυτόματα από τα Τμήματα· οι υποθεματικές και οι τίτλοι από τα Έντυπα 1Α.</p>';
 		echo '<section class="sd-card"><dl class="sd-dl"><dt>Αριθμός τμημάτων</dt><dd>' . (int) $st['classes'] . '</dd><dt>Εκπαιδευτικοί που συμμετέχουν στα Εργαστήρια</dt><dd>' . (int) $st['teachers'] . '</dd></dl>';
@@ -308,17 +332,26 @@ class SD_ErgPlan {
 
 	/* =================== Word / Excel =================== */
 
+	/** Ο/Η υπεύθυνος/η Εργαστηρίων του τμήματος (αλλιώς όλοι οι εκπαιδευτικοί του τμήματος). */
 	private static function teachers_of( $class ) {
 		$names = array();
+		$all   = array();
 		foreach ( SD_Data::class_teachers( $class->id ) as $t ) {
+			$u = get_userdata( $t->user_id );
+			if ( ! $u ) {
+				continue;
+			}
+			$all[] = $u->display_name;
 			if ( 'ergastiria' === $t->class_role ) {
-				$u = get_userdata( $t->user_id );
-				if ( $u ) {
-					$names[] = $u->display_name;
-				}
+				$names[] = $u->display_name;
 			}
 		}
-		return implode( ', ', $names );
+		return $names ? $names : array_values( array_unique( $all ) );
+	}
+
+	/** Οι επιπλέον εκπαιδευτικοί ενός κύκλου (μία γραμμή ο/η καθένας/μία). */
+	public static function extra_teachers( $text ) {
+		return array_values( array_unique( array_filter( array_map( 'trim', preg_split( '/\R/u', (string) $text ) ) ) ) );
 	}
 
 	/** Περίοδος εφαρμογής από την ενότητα του 1Α (π.χ. «Οκτ.–Νοέ.»). */
@@ -329,15 +362,37 @@ class SD_ErgPlan {
 	}
 
 	/** Γραμμές «Προγραμματισμού Εκπαιδευτικών» για ένα τμήμα (με σειρά ενοτήτων). */
+	/**
+	 * Μία γραμμή ανά θεματικό κύκλο, με τη σειρά των ενοτήτων του 1Α. Τίτλος από
+	 * το 1Α, αλλιώς από το Σχέδιο τμήματος· οι κύκλοι που δεν έχουν μπει ακόμη
+	 * στο 1Α ακολουθούν χωρίς περίοδο.
+	 */
 	public static function programming_rows( $class ) {
-		$rows    = array();
-		$teacher = self::teachers_of( $class );
+		$rows  = array();
+		$resp  = self::teachers_of( $class );
+		$vals  = self::cycle_values( $class );
+		$order = array();
 		foreach ( SD_Workshops::units( SD_Workshops::form_of_class( $class->id ) ) as $n => $u ) {
+			if ( $u->cycle && ! isset( $order[ (int) $u->cycle ] ) ) {
+				$order[ (int) $u->cycle ] = array( $n, $u );
+			}
+		}
+		foreach ( array_keys( SD_Workshops::CYCLES ) as $c ) {
+			if ( ! isset( $order[ $c ] ) ) {
+				$order[ $c ] = array( 0, null );
+			}
+		}
+		foreach ( $order as $c => $nu ) {
+			list( $n, $u ) = $nu;
+			$v      = $vals[ $c ];
+			$title  = $u && '' !== trim( $u->title ) ? $u->title : ( '' !== trim( $v['our_title'] ) ? $v['our_title'] : $v['iep_title'] );
+			$names  = array_values( array_unique( array_merge( $resp, self::extra_teachers( $v['teachers'] ?? '' ) ) ) );
 			$rows[] = array(
-				'teacher' => $teacher,
-				'cycle'   => $u->cycle ? SD_Workshops::CYCLES[ $u->cycle ] : '',
-				'title'   => $u->title,
-				'period'  => self::period_of( $n ),
+				'teacher'  => implode( ', ', $names ),
+				'cycle'    => SD_Workshops::CYCLES[ $c ],
+				'subtheme' => SD_Workshops::class_subtheme( $class, $c ),
+				'title'    => trim( (string) $title ),
+				'period'   => $n ? self::period_of( $n ) : '',
 			);
 		}
 		return $rows;
@@ -355,6 +410,7 @@ class SD_ErgPlan {
 				array(
 					array( 'Εκπαιδευτικός:', $r['teacher'] ),
 					array( 'Θεματική ενότητα:', $r['cycle'] ),
+					array( 'Υποθεματική:', $r['subtheme'] ),
 					array( 'Τίτλος:', $r['title'] ? '«' . $r['title'] . '»' : '' ),
 					array( 'Περίοδος Εφαρμογής:', $r['period'] ),
 				),
@@ -364,10 +420,10 @@ class SD_ErgPlan {
 	}
 
 	public static function programming_sheet( $year ) {
-		$rows = array( array( 'Τάξη', 'Εκπαιδευτικός', 'Θεματική ενότητα', 'Τίτλος', 'Περίοδος εφαρμογής' ) );
+		$rows = array( array( 'Τάξη', 'Εκπαιδευτικός', 'Θεματική ενότητα', 'Υποθεματική', 'Τίτλος', 'Περίοδος εφαρμογής' ) );
 		foreach ( SD_Data::classes( $year->id ) as $c ) {
 			foreach ( self::programming_rows( $c ) as $r ) {
-				$rows[] = array( SD_Data::class_label( $c ), $r['teacher'], $r['cycle'], $r['title'], $r['period'] );
+				$rows[] = array( SD_Data::class_label( $c ), $r['teacher'], $r['cycle'], $r['subtheme'], $r['title'], $r['period'] );
 			}
 		}
 		return $rows;
@@ -387,6 +443,11 @@ class SD_ErgPlan {
 			$u = get_userdata( $t->user_id );
 			if ( $u ) {
 				$teach[ $u->ID ] = $u->display_name . ' (' . ( SD_Data::CLASS_ROLES[ $t->class_role ] ?? '' ) . ')';
+			}
+		}
+		foreach ( $vals as $v ) {
+			foreach ( self::extra_teachers( $v['teachers'] ?? '' ) as $n ) {
+				$teach[ 'x' . mb_strtolower( $n ) ] = $n . ' (Εργαστήρια Δεξιοτήτων)';
 			}
 		}
 		$b = array(
@@ -410,9 +471,10 @@ class SD_ErgPlan {
 			$seq  = array_values( array_filter( array_map( 'trim', preg_split( '/\R/u', (string) $v['sequence'] ) ) ) );
 			$rows = array(
 				array( 'Θεματικός Κύκλος:', $label ),
-				array( 'Επιμέρους Θεματική Ενότητα:', SD_Workshops::subtheme( $class->grade, $c ) ),
+				array( 'Επιμέρους Θεματική Ενότητα:', SD_Workshops::class_subtheme( $class, $c ) ),
 				array( 'Τίτλος/τίτλοι προγραμμάτων:', $v['iep_title'] ),
 				array( 'Ο δικός μας τίτλος:', $v['our_title'] ),
+				array( 'Εκπαιδευτικοί που υλοποιούν:', implode( "\n", array_merge( self::teachers_of( $class ), self::extra_teachers( $v['teachers'] ?? '' ) ) ) ),
 				array( 'Στόχοι Σχεδίου Δράσης', $v['goals'] ),
 			);
 			for ( $i = 0; $i < 7; $i++ ) {
