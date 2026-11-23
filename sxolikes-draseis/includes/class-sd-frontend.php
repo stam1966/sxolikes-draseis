@@ -127,7 +127,8 @@ class SD_Frontend {
 		if ( ! is_user_logged_in() || ! check_admin_referer( self::NONCE ) ) {
 			wp_die( 'Η ενέργεια δεν επιτρέπεται.', 403 );
 		}
-		$do = sanitize_key( wp_unslash( $_POST['sd_do'] ) );
+		$do   = sanitize_key( wp_unslash( $_POST['sd_do'] ) );
+		$ajax = ! empty( $_POST['sd_ajax'] ) && in_array( $do, array( 'dep_save', 'f4_save', 'req_save' ), true );
 
 		$manage_actions = array( 'add_year', 'activate_year', 'add_class', 'add_all_classes', 'save_class', 'delete_class' );
 		if ( in_array( $do, $manage_actions, true ) && ! current_user_can( SD_Roles::CAP_MANAGE ) ) {
@@ -206,6 +207,13 @@ class SD_Frontend {
 				$result = new WP_Error( 'sd', 'Άγνωστη ενέργεια.' );
 		}
 
+		if ( $ajax ) {
+			delete_transient( 'sd_msg_' . get_current_user_id() );
+			if ( is_wp_error( $result ) ) {
+				wp_send_json_error( array( 'msg' => $result->get_error_message() ) );
+			}
+			wp_send_json_success( array( 'msg' => 'Αποθηκεύτηκε' ) );
+		}
 		if ( is_wp_error( $result ) ) {
 			set_transient( 'sd_msg_' . get_current_user_id(), array( 'error', $result->get_error_message() ), 60 );
 		} elseif ( ! get_transient( 'sd_msg_' . get_current_user_id() ) ) {
@@ -373,8 +381,8 @@ class SD_Frontend {
 		}
 	}
 
-	public static function form_open( $action ) {
-		echo '<form method="post" class="sd-form">';
+	public static function form_open( $action, $attrs = '' ) {
+		echo '<form method="post" class="sd-form"' . $attrs . '>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		wp_nonce_field( self::NONCE );
 		echo '<input type="hidden" name="sd_do" value="' . esc_attr( $action ) . '">';
 	}
@@ -462,12 +470,18 @@ class SD_Frontend {
 		}
 		echo '<p class="sd-lead">' . esc_html( $year->label . ' · ' . $lead ) . '</p></div>';
 
+		$reviewer = current_user_can( SD_Roles::CAP_REVIEW );
 		if ( $urgent ) {
 			self::next_card( $urgent[0], 'Το επόμενο βήμα σας' );
-		} elseif ( $review ) {
-			self::next_card( $review[0], 'Περιμένει τον έλεγχό σας' );
+		} elseif ( $reviewer ) {
+			// Η λίστα «Περιμένουν τον έλεγχό σας» παίζει τον ρόλο του επόμενου βήματος.
+			$reviewer = true;
 		} elseif ( $groups || $coord ) {
 			echo '<section class="sd-next sd-next-calm"><p class="sd-next-k">Όλα εντάξει</p><h2>Δεν χρειάζεται να κάνετε κάτι τώρα</h2><p>Θα σας στείλουμε email 7 και 2 ημέρες πριν από κάθε προθεσμία.</p></section>';
+		}
+
+		if ( $reviewer ) {
+			SD_Board::inbox();
 		}
 
 		if ( ! $groups && ! $school && ! $coord ) {
@@ -498,7 +512,8 @@ class SD_Frontend {
 		}
 
 		if ( $school ) {
-			echo '<section class="sd-card sd-tl-card sd-tl-school"><div class="sd-tl-top"><h3>Όλο το σχολείο</h3>' . SD_Timeline::progress_html( $school ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			SD_Board::matrix( $year );
+			echo '<details class="sd-card sd-tl-card sd-tl-school"' . ( $manage ? ' open' : '' ) . '><summary class="sd-tl-top"><h3>Οι δουλειές της χρονιάς για όλο το σχολείο</h3>' . SD_Timeline::progress_html( $school ) . '</summary>'; // phpcs:ignore WordPress.Security.EscapeOutput
 			SD_Timeline::render_steps( $school );
 			if ( $manage ) {
 				$pending_places = SD_Map::pending_count( $year->id );
@@ -506,7 +521,7 @@ class SD_Frontend {
 					echo '<p class="sd-meta">Σημεία χάρτη για έγκριση: <strong>' . (int) $pending_places . '</strong> · <a href="' . esc_url( self::url( 'xartis' ) ) . '">Χάρτης τόπου</a></p>';
 				}
 			}
-			echo '</section>';
+			echo '</details>';
 		}
 
 		// Τα Σχέδια Δράσης του σχολείου, σε σύντομη λίστα.

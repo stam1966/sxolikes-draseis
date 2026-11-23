@@ -732,3 +732,75 @@ body.sd-body {
 	.sd-wiz-pane { padding: 1.1rem; border-radius: 18px; }
 	.sd-wiz-nav .sd-button { flex: 1 1 auto; text-align: center; }
 }
+
+/* =====================================================================
+   0.18.0 · Έντυπα 2–4 βήμα-βήμα, πίνακας σχολείου, απόφαση ελέγχου
+   ===================================================================== */
+.sd-stepper { list-style: none; margin: .4rem 0 1rem; padding: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: thin; }
+.sd-stepper li { flex: none; }
+.sd-stepper button { display: inline-flex; align-items: center; gap: .5rem; border: 1px solid var(--sd-line); background: #fff; color: var(--sd-muted); border-radius: 999px; padding: .35rem .85rem .35rem .4rem; font: inherit; font-size: .9rem; cursor: pointer; }
+.sd-stepper .sd-n { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--sd-line); display: grid; place-items: center; font-weight: 700; font-size: .78rem; }
+.sd-stepper li.is-done .sd-n { background: var(--sd-ok); border-color: var(--sd-ok); color: #fff; }
+.sd-stepper li.is-cur button { border-color: var(--sd-ink); color: var(--sd-ink); font-weight: 650; box-shadow: inset 0 0 0 1px var(--sd-ink); }
+.sd-stepper li.is-cur .sd-n { border-color: var(--sd-accent); color: var(--sd-accent); }
+.sd-stepper.is-all button { color: var(--sd-ink); }
+.sd-step-off { display: none !important; }
+.sd-stepper-nav { display: flex; justify-content: space-between; align-items: center; gap: .8rem; flex-wrap: wrap; margin: 0 0 1rem; }
+.sd-linkbtn { background: none; border: 0; padding: 0; color: var(--sd-accent); font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 680px) {
+	.sd-stepper li:not(.is-cur) .sd-t { display: none; }
+	.sd-stepper button { padding: .3rem .4rem; }
+	.sd-stepper li.is-cur button { padding-right: .8rem; }
+}
+
+/* Περιμένουν τον έλεγχό σας */
+.sd-inbox { background: #fff; border-radius: 24px; box-shadow: var(--sd-shadow); padding: 1.3rem 1.4rem; margin: 0 0 1.4rem; border-top: 6px solid var(--sd-accent); }
+.sd-inbox-head { display: flex; align-items: center; gap: .7rem; margin-bottom: .6rem; }
+.sd-app .sd-inbox-head h2 { margin: 0; font-size: 1.3rem; }
+.sd-inbox-n { background: var(--sd-accent); color: #fff; border-radius: 999px; min-width: 1.8rem; padding: .05rem .55rem; text-align: center; font-weight: 700; }
+.sd-inbox-list { list-style: none; margin: 0; padding: 0; }
+.sd-inbox-list li { display: flex; align-items: center; gap: .8rem; padding: .75rem 0; border-top: 1px solid var(--sd-line); }
+.sd-inbox-list li:first-child { border-top: 0; }
+.sd-inbox-ico { width: 36px; height: 36px; border-radius: 10px; background: var(--sd-accent-soft); color: var(--sd-accent-dark); display: grid; place-items: center; flex: none; }
+.sd-inbox-txt { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+.sd-inbox-txt small { color: var(--sd-muted); }
+.sd-inbox-list .sd-button { flex: none; }
+
+/* Ο πίνακας του σχολείου */
+.sd-board { background: #fff; border-radius: 24px; box-shadow: var(--sd-shadow); padding: 1.3rem 1.4rem; margin: 0 0 1.4rem; }
+.sd-board-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem 1rem; margin-bottom: .8rem; }
+.sd-app .sd-board-head h2 { margin: 0; font-size: 1.3rem; }
+.sd-board-head p { margin: 0; color: var(--sd-muted); font-size: .92rem; }
+.sd-board-table { border: 0; box-shadow: none; }
+.sd-board-table th, .sd-board-table td { vertical-align: middle; }
+.sd-board-table thead th { font-size: .85rem; line-height: 1.25; }
+.sd-board-table thead small { font-weight: 400; color: var(--sd-muted); }
+.sd-board-table tbody th { background: #fff; font-weight: 400; }
+.sd-board-table tbody th small, .sd-board-table td small { display: block; color: var(--sd-muted); font-size: .78rem; margin-top: .15rem; }
+.sd-board-table tfoot th, .sd-board-table tfoot td { background: var(--sd-bg); font-size: .85rem; color: var(--sd-muted); }
+.sd-warn-txt { color: var(--sd-warn) !important; }
+.sd-app a.sd-cell-link { text-decoration: none; display: inline-block; }
+.sd-cell { display: inline-block; font-size: .8rem; font-weight: 700; padding: .2rem .6rem; border-radius: 999px; white-space: nowrap; }
+.sd-cell-ok { background: var(--sd-ok-soft); color: var(--sd-ok); }
+.sd-cell-wait { background: var(--sd-accent); color: #fff; }
+.sd-cell-fix { background: var(--sd-warn-bg); color: var(--sd-warn); }
+.sd-cell-todo { background: #eef4f3; color: var(--sd-accent-dark); }
+.sd-cell-none { background: #f3f4f4; color: #8a9796; font-weight: 500; }
+a.sd-cell-link:hover .sd-cell { box-shadow: 0 0 0 2px currentColor; }
+.sd-legend-cells { display: flex; flex-wrap: wrap; gap: .4rem; margin: .8rem 0 0; }
+.sd-board-acts { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .9rem 0 0; }
+@media (max-width: 700px) {
+	.sd-board-table thead { display: none; }
+	.sd-board-table tr { border: 1px solid var(--sd-line); border-radius: 12px; margin-bottom: .6rem; padding: .4rem; display: block; }
+	.sd-board-table th, .sd-board-table td { display: block; border: 0; padding: .2rem .4rem; }
+	.sd-board-table tfoot { display: none; }
+}
+
+/* Η απόφαση ελέγχου */
+.sd-review { border: 2px solid var(--sd-accent); background: linear-gradient(180deg, #f2f8f7, #fff 70%); }
+.sd-review h3 { font-size: 1.2rem; }
+.sd-app a.sd-jump { display: inline-flex; align-items: center; gap: .35rem; background: var(--sd-accent); color: #fff; border-radius: 999px; padding: .35rem .9rem; font-weight: 700; font-size: .9rem; text-decoration: none; margin: .4rem 0 0; }
+.sd-app a.sd-jump:hover { color: #fff; background: var(--sd-accent-dark); }
+details.sd-tl-school > summary { cursor: pointer; list-style: none; }
+details.sd-tl-school > summary::-webkit-details-marker { display: none; }
+details.sd-tl-school > summary h3::after { content: " ▾"; color: var(--sd-muted); font-size: .85em; }

@@ -515,7 +515,7 @@ class SD_Workshops {
 		}
 
 		if ( current_user_can( SD_Roles::CAP_REVIEW ) && $form && in_array( $form->status, array( 'ypovlithike', 'elegxthike' ), true ) && SD_Notify::review_gate( $form->submitted_by, $class->id, $form->status ) ) {
-			echo '<section class="sd-card"><h3>Έλεγχος Επιτροπής / Διεύθυνσης</h3>';
+			echo '<section class="sd-card sd-review" id="apofasi"><h3>Η απόφασή σας</h3><p class="sd-help">Αν όλα είναι εντάξει, «Σημείωση ως ελεγμένο». Αν κάτι λείπει, γράψτε τι να διορθωθεί και πατήστε «Επιστροφή για διόρθωση»· ο/η εκπαιδευτικός θα πάρει email με το σχόλιό σας.</p>';
 			SD_Frontend::form_open( 'f1a_review' );
 			echo '<input type="hidden" name="class_id" value="' . (int) $class->id . '">';
 			echo '<label class="sd-block">Σχόλια (υποχρεωτικά για επιστροφή)<textarea name="review_note" rows="3">' . esc_textarea( $form->review_note ) . '</textarea></label>';

@@ -657,7 +657,7 @@ class SD_Citizen {
 		}
 
 		if ( $edit ) {
-			SD_Frontend::form_open( 'dep_save' );
+			SD_Frontend::form_open( 'dep_save', ' data-stepper data-autosave="full"' );
 			echo '<input type="hidden" name="dep_id" value="' . (int) $dep->id . '">';
 		} else {
 			echo '<form class="sd-form" onsubmit="return false">';
@@ -688,7 +688,7 @@ class SD_Citizen {
 		echo '<label class="sd-block">Συνεργαζόμενοι/ες εκπαιδευτικοί, τάξεις ή σχολεία<textarea name="partners" rows="2"' . $ro . '>' . esc_textarea( $dep->partners ) . '</textarea></label></section>'; // phpcs:ignore WordPress.Security.EscapeOutput
 
 		/* Β. ΣΒΑ */
-		echo '<section class="sd-card"><h3>Β. Θεματικό πεδίο του Προγράμματος Σπουδών (ΣΒΑ)</h3><p class="sd-help">Ένα ή περισσότερα. Καταχωρίζεται στο myschool στο τέλος της χρονιάς.</p>';
+		echo '<section class="sd-card" data-step="Θεματικό πεδίο (ΣΒΑ)"><h3>Β. Θεματικό πεδίο του Προγράμματος Σπουδών (ΣΒΑ)</h3><p class="sd-help">Ένα ή περισσότερα. Καταχωρίζεται στο myschool στο τέλος της χρονιάς.</p>';
 		echo $edit ? '' : '<fieldset disabled>';
 		self::checks( 'sdgs', self::SDGS, $dep->sdgs );
 		echo '<p><strong>Ζήτημα ενεργού πολιτειότητας</strong> (ένα, για το Πρότυπο Ανάπτυξης Δράσεων)</p><div class="sd-checks">';
@@ -702,7 +702,7 @@ class SD_Citizen {
 		/* Γ. Σύνδεση */
 		$actions = SD_Plans::year_actions( $class->year_id, $class->grade );
 		$units   = SD_Workshops::units( SD_Workshops::form_of_class( $class->id ) );
-		echo '<section class="sd-card"><h3>Γ. Σύνδεση με τον προγραμματισμό του σχολείου</h3>';
+		echo '<section class="sd-card" data-step="Σύνδεση με το σχολείο"><h3>Γ. Σύνδεση με τον προγραμματισμό του σχολείου</h3>';
 		foreach ( array( 'action_id' => 'Σχέδιο Δράσης – ενέργεια (κύρια)', 'action2_id' => 'Δεύτερη σύνδεση (προαιρετική)' ) as $field => $label ) {
 			echo '<label class="sd-block">' . esc_html( $label ) . ' <select name="' . esc_attr( $field ) . '"' . $ro . '><option value="0">Δεν συνδέεται</option>'; // phpcs:ignore WordPress.Security.EscapeOutput
 			foreach ( $actions as $row ) {
@@ -723,7 +723,7 @@ class SD_Citizen {
 
 		/* Δ. Κατανομή 10 ωρών */
 		$allowed = self::GRADE_SUBJECTS[ (int) $class->grade ] ?? array();
-		echo '<section class="sd-card"><h3>Δ. Κατανομή των 10 διδακτικών ωρών</h3>';
+		echo '<section class="sd-card" data-step="Οι 10 ώρες"><h3>Δ. Κατανομή των 10 διδακτικών ωρών</h3>';
 		echo '<p class="sd-help">Μαθήματα της εγκυκλίου για την τάξη: ' . esc_html( implode( ', ', array_map( function ( $k ) {
 			return SD_Citizen::SUBJECTS[ $k ];
 		}, $allowed ) ) ) . '. Αν χρησιμοποιούνται ώρες Εργαστηρίων, χρειάζεται συνεννόηση με τον/την υπεύθυνο/η τους.</p>';
@@ -746,7 +746,7 @@ class SD_Citizen {
 		echo '</tbody><tfoot><tr><th colspan="2">Σύνολο</th><th><span id="sum-hours">' . (int) self::hours_total( $dep ) . '</span> / 10</th><th></th></tr></tfoot></table></section>';
 
 		/* Ε. Πεδίο */
-		echo '<section class="sd-card"><h3>Ε. Πεδίο υλοποίησης</h3>' . ( $edit ? '' : '<fieldset disabled>' );
+		echo '<section class="sd-card" data-step="Πεδίο υλοποίησης"><h3>Ε. Πεδίο υλοποίησης</h3>' . ( $edit ? '' : '<fieldset disabled>' );
 		echo '<p><strong>Χώρος</strong></p>';
 		self::checks( 'places', self::PLACES, $dep->places );
 		echo '<p><strong>Αποδέκτης της δράσης</strong></p>';
@@ -754,7 +754,7 @@ class SD_Citizen {
 		echo ( $edit ? '' : '</fieldset>' ) . '</section>';
 
 		/* ΣΤ. Φάσεις */
-		echo '<section class="sd-card"><h3>ΣΤ. Φάσεις υλοποίησης</h3><table class="sd-table sd-stages"><thead><tr><th>Φάση</th><th>Ενδεικτικές δραστηριότητες / εργαλεία</th><th>Ώρες</th><th>Πότε</th></tr></thead><tbody>';
+		echo '<section class="sd-card" data-step="Φάσεις"><h3>ΣΤ. Φάσεις υλοποίησης</h3><table class="sd-table sd-stages"><thead><tr><th>Φάση</th><th>Ενδεικτικές δραστηριότητες / εργαλεία</th><th>Ώρες</th><th>Πότε</th></tr></thead><tbody>';
 		foreach ( self::STAGES as $k => $l ) {
 			$s = $dep->stage_arr[ $k ] ?? array( 'activities' => '', 'hours' => '', 'when' => '' );
 			echo '<tr><th>' . esc_html( $l ) . '</th><td><textarea rows="2" name="stages[' . esc_attr( $k ) . '][activities]"' . $ro . '>' . esc_textarea( $s['activities'] ) . '</textarea></td>'; // phpcs:ignore WordPress.Security.EscapeOutput
@@ -764,7 +764,7 @@ class SD_Citizen {
 		echo '</tbody><tfoot><tr><th colspan="2">Σύνολο</th><th><span id="sum-stages">' . (int) self::stages_total( $dep ) . '</span> / 10</th><th></th></tr></tfoot></table></section>';
 
 		/* Ζ. Συνεργασίες */
-		echo '<section class="sd-card"><h3>Ζ. Συνεργασίες, επισκέψεις και διάχυση</h3>';
+		echo '<section class="sd-card" data-step="Συνεργασίες και διάχυση"><h3>Ζ. Συνεργασίες, επισκέψεις και διάχυση</h3>';
 		echo '<label class="sd-block">Εκπαιδευτική επίσκεψη εκτός σχολείου (κενό = δεν προβλέπεται· αλλιώς υποβάλλεται Έντυπο 3)<textarea name="visit" rows="2"' . $ro . '>' . esc_textarea( $dep->visit ) . '</textarea></label>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<label class="sd-block">Φορέας / ομιλητής στο σχολείο (κενό = δεν προβλέπεται· αλλιώς Έντυπο 3)<textarea name="visitor" rows="2"' . $ro . '>' . esc_textarea( $dep->visitor ) . '</textarea></label>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo $edit ? '' : '<fieldset disabled>';
@@ -776,7 +776,7 @@ class SD_Citizen {
 		echo $edit ? '' : '</fieldset>';
 		echo '</section>';
 
-		echo '<section class="sd-card"><h3>Σημειώσεις από τον βοηθό AI</h3><p class="sd-help">Επικολλήστε εδώ την απάντηση του εργαλείου AI, για να την έχετε δίπλα όσο συμπληρώνετε το έντυπο. Δεν εμφανίζεται στην εκτύπωση.</p>';
+		echo '<section class="sd-card" data-step="Σημειώσεις AI"><h3>Σημειώσεις από τον βοηθό AI</h3><p class="sd-help">Επικολλήστε εδώ την απάντηση του εργαλείου AI, για να την έχετε δίπλα όσο συμπληρώνετε το έντυπο. Δεν εμφανίζεται στην εκτύπωση.</p>';
 		echo '<textarea name="ai_notes" rows="6"' . $ro . '>' . esc_textarea( $dep->ai_notes ) . '</textarea></section>'; // phpcs:ignore WordPress.Security.EscapeOutput
 
 		if ( $edit ) {
@@ -800,7 +800,7 @@ class SD_Citizen {
 		}
 
 		if ( current_user_can( SD_Roles::CAP_REVIEW ) && in_array( $dep->status, array( 'ypovlithike', 'elegxthike' ), true ) && SD_Notify::review_gate( $dep->submitted_by, $dep->class_id, $dep->status ) ) {
-			echo '<section class="sd-card"><h3>Έλεγχος Επιτροπής / Διεύθυνσης</h3>';
+			echo '<section class="sd-card sd-review" id="apofasi"><h3>Η απόφασή σας</h3><p class="sd-help">Αν όλα είναι εντάξει, «Σημείωση ως ελεγμένο». Αν κάτι λείπει, γράψτε τι να διορθωθεί και πατήστε «Επιστροφή για διόρθωση»· ο/η εκπαιδευτικός θα πάρει email με το σχόλιό σας.</p>';
 			SD_Frontend::form_open( 'dep_review' );
 			echo '<input type="hidden" name="dep_id" value="' . (int) $dep->id . '">';
 			echo '<label class="sd-block">Σχόλια (υποχρεωτικά για επιστροφή)<textarea name="review_note" rows="3">' . esc_textarea( $dep->review_note ) . '</textarea></label>';

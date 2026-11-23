@@ -359,7 +359,7 @@ class SD_F4 {
 			echo '<p class="sd-notice sd-ok">Τα πεδία προσυμπληρώθηκαν από το Έντυπο 1Α και το Έντυπο 2. Ελέγξτε τα και πατήστε «Αποθήκευση».</p>';
 		}
 
-		echo '<form method="post" class="sd-form">';
+		echo '<form method="post" class="sd-form"' . ( $edit ? ' data-stepper data-autosave="full"' : ' data-stepper' ) . '>';
 		wp_nonce_field( SD_Frontend::NONCE );
 		echo '<input type="hidden" name="sd_do" value="f4_save"><input type="hidden" name="class_id" value="' . (int) $class->id . '">';
 
@@ -419,7 +419,7 @@ class SD_F4 {
 			echo '<input type="hidden" name="class_id" value="' . (int) $class->id . '"><p><button class="sd-button" type="submit"' . ( $missing ? ' disabled' : '' ) . '>Υποβολή στη Διεύθυνση</button></p></form>';
 		}
 		if ( $f && current_user_can( SD_Roles::CAP_REVIEW ) && in_array( $f->status, array( 'ypovlithike', 'elegxthike' ), true ) && SD_Notify::review_gate( $f->submitted_by, $class->id, $f->status ) ) {
-			echo '<section class="sd-card"><h3>Έλεγχος Επιτροπής / Διεύθυνσης</h3>';
+			echo '<section class="sd-card sd-review" id="apofasi"><h3>Η απόφασή σας</h3><p class="sd-help">Αν όλα είναι εντάξει, «Σημείωση ως ελεγμένο». Αν κάτι λείπει, γράψτε τι να διορθωθεί και πατήστε «Επιστροφή για διόρθωση»· ο/η εκπαιδευτικός θα πάρει email με το σχόλιό σας.</p>';
 			SD_Frontend::form_open( 'f4_review' );
 			echo '<input type="hidden" name="class_id" value="' . (int) $class->id . '"><label class="sd-block">Σχόλια (υποχρεωτικά για επιστροφή)<textarea name="review_note" rows="2">' . esc_textarea( $f->review_note ) . '</textarea></label>';
 			echo '<p><button class="sd-button" type="submit" name="decision" value="ok">Σημείωση ως ελεγμένο</button> <button class="sd-button sd-danger" type="submit" name="decision" value="return">Επιστροφή για διόρθωση</button></p></form></section>';

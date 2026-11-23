@@ -424,7 +424,7 @@ class SD_Requests {
 		}
 
 		if ( $r && current_user_can( SD_Roles::CAP_MANAGE ) && in_array( $r->status, array( 'ypovlithike', 'egkrithike' ), true ) ) {
-			echo '<section class="sd-card"><h3>Για τη Διεύθυνση: απόφαση Συλλόγου Διδασκόντων</h3>';
+			echo '<section class="sd-card sd-review" id="apofasi"><h3>Η απόφαση της Διεύθυνσης</h3><p class="sd-help">Καταχωρίστε τον αριθμό και την ημερομηνία της πράξης του Συλλόγου Διδασκόντων. Αν κάτι λείπει, γράψτε τι να διορθωθεί και πατήστε «Επιστροφή για διόρθωση».</p>';
 			SD_Frontend::form_open( 'req_review' );
 			echo '<input type="hidden" name="req_id" value="' . (int) $r->id . '"><div class="sd-row">';
 			echo '<label>Πράξη αρ. <input name="praxi_no" size="6" value="' . esc_attr( $r->praxi_no ) . '"></label>';
@@ -454,13 +454,13 @@ class SD_Requests {
 			SD_AiField::mark( 'f3', $r->id );
 		}
 
-		echo '<form method="post" class="sd-form" data-sd-req>';
+		echo '<form method="post" class="sd-form" data-sd-req data-stepper' . ( $r ? ' data-autosave="full"' : '' ) . '>';
 		wp_nonce_field( SD_Frontend::NONCE );
 		echo '<input type="hidden" name="sd_do" value="req_save">';
 		if ( $r ) {
 			echo '<input type="hidden" name="req_id" value="' . (int) $r->id . '">';
 		}
-		echo '<section class="sd-card">';
+		echo '<section class="sd-card" data-step="Τι αφορά">';
 		if ( ! $r ) {
 			echo '<label class="sd-block">Τάξη / Τμήμα <select name="class_id">';
 			foreach ( $classes as $c ) {

@@ -596,3 +596,224 @@
 		lockOrder();
 	}
 }() );
+
+/* Έντυπα 2, 3, 4 βήμα-βήμα: κάθε ενότητα της φόρμας γίνεται βήμα. */
+( function () {
+	'use strict';
+	document.querySelectorAll( 'form[data-stepper]' ).forEach( function ( form ) {
+		var all = Array.prototype.filter.call( form.children, function ( el ) {
+			return el.tagName === 'SECTION' && el.classList.contains( 'sd-card' );
+		} );
+		if ( all.length < 2 ) {
+			return;
+		}
+		var key = 'sd-step-' + location.search;
+		var cur = 0;
+		var showAll = false;
+		try {
+			cur = parseInt( sessionStorage.getItem( key ), 10 ) || 0;
+		} catch ( e ) {}
+
+		var nav = document.createElement( 'ol' );
+		nav.className = 'sd-stepper';
+		nav.setAttribute( 'aria-label', 'Βήματα του εντύπου' );
+		form.insertBefore( nav, all[ 0 ] );
+
+		var bar = document.createElement( 'div' );
+		bar.className = 'sd-stepper-nav';
+		var prev = document.createElement( 'button' );
+		prev.type = 'button';
+		prev.className = 'sd-button sd-quiet';
+		prev.textContent = 'Προηγούμενο';
+		var next = document.createElement( 'button' );
+		next.type = 'button';
+		next.className = 'sd-button sd-big-btn';
+		next.textContent = 'Επόμενο βήμα';
+		var saved = document.createElement( 'span' );
+		saved.className = 'sd-saved';
+		saved.setAttribute( 'aria-live', 'polite' );
+		bar.appendChild( prev );
+		bar.appendChild( saved );
+		bar.appendChild( next );
+		var last = all[ all.length - 1 ];
+		last.parentNode.insertBefore( bar, last.nextSibling );
+
+		var toggle = document.createElement( 'button' );
+		toggle.type = 'button';
+		toggle.className = 'sd-linkbtn';
+		toggle.textContent = 'Δείτε όλο το έντυπο σε μία σελίδα';
+		nav.parentNode.insertBefore( toggle, nav );
+
+		// Το αρχικό κουμπί αποθήκευσης φαίνεται μόνο στο τελευταίο βήμα ή σε «όλα μαζί».
+		var submitP = null;
+		form.querySelectorAll( ':scope > p' ).forEach( function ( p ) {
+			if ( p.querySelector( 'button[type="submit"]' ) ) {
+				submitP = p;
+			}
+		} );
+
+		function visible() {
+			return all.filter( function ( s ) {
+				return ! s.hidden;
+			} );
+		}
+		function title( s ) {
+			var h = s.querySelector( 'h3' );
+			if ( s.getAttribute( 'data-step' ) ) {
+				return s.getAttribute( 'data-step' );
+			}
+			return h ? h.textContent.replace( /^[Α-ΩΙ]+\.\s*/, '' ).replace( /^(Ι|ΙΙ|ΙΙΙ|IV)\.\s*/, '' ) : '';
+		}
+		function render() {
+			var steps = visible();
+			if ( cur >= steps.length ) {
+				cur = steps.length - 1;
+			}
+			nav.innerHTML = '';
+			steps.forEach( function ( s, i ) {
+				var li = document.createElement( 'li' );
+				var b = document.createElement( 'button' );
+				b.type = 'button';
+				b.innerHTML = '<span class="sd-n"></span><span class="sd-t"></span>';
+				b.querySelector( '.sd-n' ).textContent = i + 1;
+				b.querySelector( '.sd-t' ).textContent = title( s );
+				if ( i === cur && ! showAll ) {
+					li.className = 'is-cur';
+					b.setAttribute( 'aria-current', 'step' );
+				} else if ( i < cur ) {
+					li.className = 'is-done';
+				}
+				b.addEventListener( 'click', function () {
+					go( i );
+				} );
+				li.appendChild( b );
+				nav.appendChild( li );
+			} );
+			all.forEach( function ( s ) {
+				s.classList.toggle( 'sd-step-off', ! showAll && s !== steps[ cur ] );
+			} );
+			prev.style.visibility = ! showAll && cur > 0 ? 'visible' : 'hidden';
+			next.style.display = ! showAll && cur < steps.length - 1 ? '' : 'none';
+			if ( submitP ) {
+				submitP.style.display = showAll || cur === steps.length - 1 ? '' : 'none';
+			}
+			nav.classList.toggle( 'is-all', showAll );
+			toggle.textContent = showAll ? 'Βήμα-βήμα' : 'Δείτε όλο το έντυπο σε μία σελίδα';
+			try {
+				sessionStorage.setItem( key, cur );
+			} catch ( e ) {}
+		}
+		function go( i ) {
+			showAll = false;
+			cur = Math.max( 0, Math.min( i, visible().length - 1 ) );
+			render();
+			var top = nav.getBoundingClientRect().top + window.pageYOffset - 16;
+			window.scrollTo( { top: top, behavior: 'smooth' } );
+		}
+		prev.addEventListener( 'click', function () {
+			go( cur - 1 );
+		} );
+		next.addEventListener( 'click', function () {
+			if ( form._sdSave ) {
+				form._sdSave();
+			}
+			go( cur + 1 );
+		} );
+		toggle.addEventListener( 'click', function () {
+			showAll = ! showAll;
+			render();
+		} );
+		form.addEventListener( 'change', function ( e ) {
+			if ( e.target.name === 'part' ) {
+				setTimeout( render, 0 );
+			}
+		} );
+		form._sdStatus = function ( t, bad ) {
+			saved.textContent = t;
+			saved.classList.toggle( 'is-bad', !! bad );
+		};
+		render();
+	} );
+
+	/* Αυτόματη αποθήκευση ολόκληρης φόρμας (Έντυπα 2, 3, 4). */
+	document.querySelectorAll( 'form[data-autosave="full"]' ).forEach( function ( form ) {
+		if ( ! window.fetch || ! window.FormData ) {
+			return;
+		}
+		var timer = null;
+		var busy = false;
+		var again = false;
+		function status( t, bad ) {
+			if ( form._sdStatus ) {
+				form._sdStatus( t, bad );
+			}
+		}
+		function save() {
+			clearTimeout( timer );
+			if ( busy ) {
+				again = true;
+				return;
+			}
+			busy = true;
+			var body = new FormData( form );
+			body.append( 'sd_ajax', '1' );
+			status( 'Αποθήκευση…' );
+			fetch( form.getAttribute( 'action' ) || location.href, { method: 'POST', body: body, credentials: 'same-origin' } )
+				.then( function ( r ) {
+					return r.json();
+				} )
+				.then( function ( j ) {
+					busy = false;
+					if ( j && j.success ) {
+						status( '✓ Αποθηκεύτηκε' );
+					} else {
+						status( ( j && j.data && j.data.msg ) || 'Δεν αποθηκεύτηκε. Πατήστε «Αποθήκευση».', true );
+					}
+					if ( again ) {
+						again = false;
+						save();
+					}
+				} )
+				.catch( function () {
+					busy = false;
+					status( 'Δεν αποθηκεύτηκε (σύνδεση). Πατήστε «Αποθήκευση».', true );
+				} );
+		}
+		form._sdSave = function () {
+			if ( timer ) {
+				save();
+			}
+		};
+		function later( ms ) {
+			clearTimeout( timer );
+			status( '' );
+			timer = setTimeout( save, ms );
+		}
+		form.addEventListener( 'input', function ( e ) {
+			if ( e.target.closest( '.sd-copy, .sd-ai-panel' ) ) {
+				return;
+			}
+			later( 1500 );
+		} );
+		form.addEventListener( 'change', function ( e ) {
+			if ( e.target.closest( '.sd-copy, .sd-ai-panel' ) ) {
+				return;
+			}
+			later( 600 );
+		} );
+	} );
+
+	/* Για Επιτροπή/Διεύθυνση: γρήγορη μετάβαση στην απόφαση. */
+	var dec = document.getElementById( 'apofasi' );
+	var h = document.querySelector( '.sd-app h2' );
+	if ( dec && h ) {
+		var a = document.createElement( 'a' );
+		a.href = '#apofasi';
+		a.className = 'sd-jump';
+		a.textContent = 'Μετάβαση στην απόφαση ↓';
+		h.parentNode.insertBefore( a, h );
+		if ( location.hash === '#apofasi' ) {
+			dec.scrollIntoView();
+		}
+	}
+}() );
