@@ -104,6 +104,9 @@
 	'use strict';
 	var dirty = null;
 	document.querySelectorAll( 'form.sd-form' ).forEach( function ( form ) {
+		if ( form.hasAttribute( 'data-autosave' ) ) {
+			return; // αποθηκεύεται μόνη της
+		}
 		// Μόνο φόρμες με πεδία κειμένου (όχι φόρμες-κουμπιά ενεργειών).
 		if ( ! form.querySelector( 'textarea, input[type="text"], input:not([type]), input[type="date"], input[type="number"]' ) ) {
 			return;
@@ -476,4 +479,120 @@
 			closeOutside( null );
 		}
 	} );
+}() );
+
+/* Εργαστήρια βήμα-βήμα: αυτόματη αποθήκευση κάθε πεδίου. */
+( function () {
+	'use strict';
+	var form = document.querySelector( 'form[data-autosave]' );
+	var node = document.getElementById( 'sd-wiz-cfg' );
+	if ( ! form || ! node || ! window.fetch ) {
+		return;
+	}
+	var cfg = JSON.parse( node.textContent );
+	var out = form.querySelector( '.sd-saved' );
+	var timers = {};
+	var pending = 0;
+	function status( txt, bad ) {
+		if ( out ) {
+			out.textContent = txt;
+			out.classList.toggle( 'is-bad', !! bad );
+		}
+	}
+	function meters( m ) {
+		Object.keys( m || {} ).forEach( function ( k ) {
+			var box = document.querySelector( '[data-meter="' + k + '"]' );
+			if ( box ) {
+				box.querySelector( 'i' ).style.width = m[ k ][ 0 ] + '%';
+				box.querySelector( 'small' ).textContent = m[ k ][ 1 ];
+			}
+		} );
+	}
+	function send( field, value, extra ) {
+		var body = new FormData();
+		body.append( 'action', 'sd_wiz_save' );
+		body.append( 'nonce', cfg.nonce );
+		body.append( 'class_id', form.getAttribute( 'data-class' ) );
+		body.append( 'k', form.getAttribute( 'data-k' ) );
+		body.append( 'field', field );
+		body.append( 'value', value );
+		Object.keys( extra || {} ).forEach( function ( x ) {
+			body.append( x, extra[ x ] );
+		} );
+		pending++;
+		status( 'Αποθήκευση…' );
+		fetch( cfg.ajax, { method: 'POST', body: body, credentials: 'same-origin' } )
+			.then( function ( r ) {
+				return r.json();
+			} )
+			.then( function ( j ) {
+				pending--;
+				if ( j && j.success ) {
+					meters( j.data.meters );
+					if ( ! pending ) {
+						status( '✓ Αποθηκεύτηκε' );
+					}
+				} else {
+					status( ( j && j.data && j.data.msg ) || 'Δεν αποθηκεύτηκε. Πατήστε «Επόμενο βήμα».', true );
+				}
+			} )
+			.catch( function () {
+				pending--;
+				status( 'Δεν αποθηκεύτηκε (σύνδεση). Πατήστε «Επόμενο βήμα».', true );
+			} );
+	}
+	function fieldOf( el ) {
+		return ( el.name || '' ).replace( /\[\]$/, '' );
+	}
+	function save( el ) {
+		var name = fieldOf( el );
+		if ( ! name || name === 'skills_sent' || el.type === 'hidden' ) {
+			return;
+		}
+		var m = name.match( /^order\[(\d+)\]$/ );
+		if ( m ) {
+			send( 'order', el.value, { unit: m[ 1 ] } );
+			return;
+		}
+		if ( name === 'skills' ) {
+			var vals = [];
+			form.querySelectorAll( 'input[name="skills[]"]:checked' ).forEach( function ( c ) {
+				vals.push( c.value );
+			} );
+			send( 'skills', vals.join( ',' ) );
+			return;
+		}
+		send( name, el.value );
+	}
+	form.addEventListener( 'change', function ( e ) {
+		if ( e.target.matches( 'input[type="radio"], input[type="checkbox"]' ) ) {
+			save( e.target );
+		}
+	} );
+	form.addEventListener( 'input', function ( e ) {
+		var el = e.target;
+		if ( ! el.matches( 'textarea, input[type="text"], input[type="number"]' ) ) {
+			return;
+		}
+		status( '' );
+		clearTimeout( timers[ el.name ] );
+		timers[ el.name ] = setTimeout( function () {
+			save( el );
+		}, 900 );
+	} );
+	// Κάθε κύκλος μπαίνει μία φορά στη σειρά της χρονιάς.
+	function lockOrder() {
+		var used = {};
+		form.querySelectorAll( 'input[name^="order"]:checked' ).forEach( function ( r ) {
+			used[ r.value ] = r.name;
+		} );
+		form.querySelectorAll( 'input[name^="order"]' ).forEach( function ( r ) {
+			var taken = used[ r.value ] && used[ r.value ] !== r.name;
+			r.closest( 'label' ).classList.toggle( 'is-taken', !! taken );
+		} );
+	}
+	if ( form.querySelector( 'input[name^="order"]' ) ) {
+		form.addEventListener( 'change', lockOrder );
+		lockOrder();
+	}
 }() );

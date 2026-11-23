@@ -91,7 +91,8 @@ class SD_Docs {
 		foreach ( $units as $u ) {
 			$filled += ( $u->cycle && '' !== trim( $u->title ) ) ? 1 : 0;
 		}
-		$url = SD_Frontend::url( 'ergastiria', array( 'class' => $class->id ) );
+		list( $k, $v ) = SD_Wizard::first_step( $class );
+		$url           = SD_Wizard::url( $class->id, $k, $v );
 		list( $state, $note, $fix ) = self::status_card( $form ? $form->status : '', $url );
 		if ( 'todo' === $state ) {
 			$errors = 0;
@@ -121,7 +122,7 @@ class SD_Docs {
 				'state' => $no ? 'miss' : 'ready',
 				'note'  => $no ? ( 1 === $no ? 'Λείπει ένας τίτλος' : 'Λείπουν ' . $no . ' τίτλοι' ) : 'Έτοιμο',
 				'pct'   => $n ? (int) round( 100 * ( $n - $no ) / $n ) : 0,
-				'fix'   => $no ? SD_Frontend::url( 'ergastiria', array( 'sxedio' => $class->id ) ) : '',
+				'fix'   => $no ? SD_Wizard::url( $class->id ) : '',
 			)
 		);
 	}

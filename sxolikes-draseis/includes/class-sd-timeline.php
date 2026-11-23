@@ -102,8 +102,8 @@ class SD_Timeline {
 		$steps[] = self::step(
 			'Σχεδιάστε τα Εργαστήρια της χρονιάς',
 			$state,
-			$f1a ? '' : 'Δεν έχει ξεκινήσει.',
-			SD_Frontend::url( 'ergastiria', array( 'class' => $class->id ) ),
+			$f1a ? '' : 'Λίγες απλές ερωτήσεις για κάθε θεματικό κύκλο.',
+			in_array( $state, array( 'done', 'review' ), true ) ? SD_Frontend::url( 'ergastiria', array( 'class' => $class->id ) ) : SD_Wizard::url( $class->id ),
 			in_array( $state, array( 'done', 'review' ), true ) ? 'Προβολή' : ( $f1a ? 'Συνέχεια' : 'Ξεκινήστε' ),
 			SD_Workshops::deadline(),
 			'Έντυπο 1Α'

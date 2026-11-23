@@ -141,7 +141,7 @@ class SD_Workshops {
 		return $out;
 	}
 
-	private static function ensure_form( $class ) {
+	public static function ensure_form( $class ) {
 		global $wpdb;
 		$form = self::form_of_class( $class->id );
 		if ( $form ) {
@@ -388,6 +388,8 @@ class SD_Workshops {
 	public static function render() {
 		if ( isset( $_GET['print'] ) ) {
 			self::render_print( absint( $_GET['print'] ) );
+		} elseif ( isset( $_GET['odigos'] ) ) {
+			SD_Wizard::render( absint( $_GET['odigos'] ) );
 		} elseif ( isset( $_GET['sxedio'] ) ) {
 			SD_ErgPlan::render_class( absint( $_GET['sxedio'] ) );
 		} elseif ( isset( $_GET['sxolio'] ) ) {
@@ -432,7 +434,7 @@ class SD_Workshops {
 			}
 			echo '</tbody></table></div>';
 			echo '<p class="sd-meta">Εβδομάδες: ' . (int) $weeks . ' · Σύνδεση με Σχέδια Δράσης: ' . (int) $links . ' / 4</p>';
-			echo '<p><a class="sd-button sd-small" href="' . esc_url( self::url_form( $c ) ) . '">Έντυπο 1Α</a> <a class="sd-button sd-small sd-quiet" href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxedio' => $c->id ) ) ) . '">Σχέδιο τμήματος</a> <span class="sd-meta">Προγραμματισμός: ' . SD_Exports::links( 'prog', $c->id ) . '</span></p></section>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			echo '<p><a class="sd-button sd-small" href="' . esc_url( SD_Wizard::url( $c->id ) ) . '">Συμπληρώστε βήμα-βήμα</a> <a class="sd-button sd-small sd-quiet" href="' . esc_url( self::url_form( $c ) ) . '">Έντυπο 1Α</a> <a class="sd-button sd-small sd-quiet" href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxedio' => $c->id ) ) ) . '">Σχέδιο τμήματος</a> <span class="sd-meta">Προγραμματισμός: ' . SD_Exports::links( 'prog', $c->id ) . '</span></p></section>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		}
 	}
 
