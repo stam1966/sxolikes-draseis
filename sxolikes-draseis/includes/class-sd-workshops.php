@@ -462,11 +462,12 @@ class SD_Workshops {
 			}
 		}
 
-		echo '<p><a href="' . esc_url( SD_Frontend::url( 'ergastiria' ) ) . '">← Όλα τα τμήματα</a> · <a href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'print' => $class->id ) ) ) . '" target="_blank" rel="noopener">Εκτύπωση</a> · ' . SD_Exports::links( 'f1a', $class->id ) . '</p>';
+		echo '<p class="sd-back"><a href="' . esc_url( SD_Frontend::url( 'ergastiria' ) ) . '">← Όλα τα τμήματα</a></p>';
 		echo '<h2>Έντυπο 1Α · Τμήμα ' . esc_html( SD_Data::class_label( $class ) ) . ' ' . self::status_badge( $form ) . '</h2>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<p class="sd-meta">Υπεύθυνος/η Εργαστηρίων: ' . esc_html( isset( $by_role['ergastiria'] ) ? implode( ', ', $by_role['ergastiria'] ) : '—' );
 		echo ' · ΠΕ70 τμήματος: ' . esc_html( isset( $by_role['pe70'] ) ? implode( ', ', $by_role['pe70'] ) : '—' );
 		echo ' · Εβδομαδιαίες ώρες: ' . (int) $class->workshop_hours . '</p>';
+		echo SD_Docs::grid( array( SD_Docs::f1a( $class ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput
 
 		if ( $form && 'epistrafike' === $form->status && $form->review_note ) {
 			echo '<p class="sd-notice sd-error"><strong>Σχόλια ελέγχου:</strong> ' . nl2br( esc_html( $form->review_note ) ) . '</p>';

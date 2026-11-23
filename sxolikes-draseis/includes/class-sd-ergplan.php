@@ -237,9 +237,10 @@ class SD_ErgPlan {
 			SD_AiField::mark( 'sxtm', $class->id );
 		}
 
-		echo '<p><a href="' . esc_url( SD_Frontend::url( 'ergastiria' ) ) . '">← Εργαστήρια</a> · Σχέδιο τμήματος: ' . SD_Exports::links( 'sxtm', $class->id, 'Word' ) . ' · Προγραμματισμός Εκπαιδευτικών: ' . SD_Exports::links( 'prog', $class->id, 'Word' ) . '</p>';
+		echo '<p class="sd-back"><a href="' . esc_url( SD_Frontend::url( 'ergastiria' ) ) . '">← Εργαστήρια</a></p>';
 		echo '<h2>Σχέδιο Δράσης του Τμήματος ' . esc_html( SD_Data::class_label( $class ) ) . ' · Εργαστήρια Δεξιοτήτων</h2>';
 		echo '<p class="sd-help">Υπόδειγμα της Πλατφόρμας 21+. Τα πεδία προσυμπληρώθηκαν από το Έντυπο 1Α και, στο τέλος της χρονιάς, από το Έντυπο 4. Το συμπληρώνετε όποτε θέλετε· δεν κλειδώνει και δεν επηρεάζει το 1Α.</p>';
+		echo SD_Docs::grid( array( SD_Docs::sxtm( $class ), SD_Docs::prog( $class ) ), 'Τι βγαίνει από αυτή τη σελίδα' ); // phpcs:ignore WordPress.Security.EscapeOutput
 
 		echo '<form method="post" class="sd-form">';
 		wp_nonce_field( SD_Frontend::NONCE );

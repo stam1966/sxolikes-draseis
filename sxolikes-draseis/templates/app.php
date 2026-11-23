@@ -21,6 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php echo SD_Frontend::logo_html(); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 			<span class="sd-brand-txt"><span class="sd-site"><?php bloginfo( 'name' ); ?></span><span class="sd-school"><?php echo esc_html( SD_Frontend::school_name() ); ?></span></span>
 		</a>
+		<?php echo SD_Frontend::header_user(); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 	</div>
 </header>
 <main class="sd-main">

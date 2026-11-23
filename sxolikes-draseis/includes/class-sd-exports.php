@@ -28,7 +28,7 @@ class SD_Exports {
 
 	/** «Προεπισκόπηση · Λήψη σε Word» για τη σελίδα του κάθε εντύπου. */
 	public static function links( $type, $id, $label = 'Λήψη σε Word' ) {
-		return '<a href="' . esc_url( self::preview_url( $type, $id ) ) . '">Προεπισκόπηση</a> · <a href="' . esc_url( self::url( $type, $id ) ) . '">' . esc_html( $label ) . '</a>';
+		return SD_Docs::actions( $type, $id, 'Λήψη σε Word' === $label ? 'Word' : $label );
 	}
 
 	/** Στέλνει το Word ή, στην προεπισκόπηση, το δείχνει ως σελίδα. */
@@ -46,7 +46,7 @@ class SD_Exports {
 		echo '<style>body{margin:0;background:#eef2f1}.sd-preview{max-width:' . ( $landscape ? '1100' : '820' ) . 'px;margin:0 auto;padding:16px}.sd-preview .sd-print{background:#fff;padding:24px 28px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12)}.sd-preview-bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 0;background:#eef2f1}@media print{body{background:#fff}.sd-preview{max-width:none;padding:0}.sd-preview .sd-print{box-shadow:none;padding:0}' . ( $landscape ? '@page{size:landscape}' : '' ) . '}</style></head><body>';
 		echo '<div class="sd-app sd-preview"><div class="sd-preview-bar sd-noprint"><button class="sd-button sd-quiet" type="button" onclick="history.length>1?history.back():window.close()">← Πίσω</button> <a class="sd-button" href="' . esc_url( self::url( $type, $id ) ) . '">Λήψη σε Word</a> <button class="sd-button" type="button" onclick="window.print()">Εκτύπωση / PDF</button> <span class="sd-help">Προεπισκόπηση: έτσι θα βγει το έντυπο' . ( $landscape ? ' (οριζόντια σελίδα)' : '' ) . '.</span></div><div class="sd-print">';
 		self::print_blocks( $blocks );
-		echo '</div></div></body></html>';
+		echo '</div></div>' . ( ! empty( $_GET['tiposi'] ) ? '<script>addEventListener("load",function(){setTimeout(function(){window.print();},300);});</script>' : '' ) . '</body></html>'; // phpcs:ignore WordPress.Security.NonceVerification
 		exit;
 	}
 

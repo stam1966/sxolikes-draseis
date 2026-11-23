@@ -1,0 +1,3 @@
+Commissioner — Copyright 2019 The Commissioner Project Authors (https://github.com/kosbarts/Commissioner)
+Άδεια: SIL Open Font License 1.1 — https://openfontlicense.org
+Υποσύνολα greek, latin, latin-ext από το Google Fonts, αποθηκευμένα τοπικά.

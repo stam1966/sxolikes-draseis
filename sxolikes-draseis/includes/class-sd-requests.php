@@ -401,7 +401,7 @@ class SD_Requests {
 
 		echo '<p><a href="' . esc_url( SD_Frontend::url( 'aitimata' ) ) . '">← Όλα τα αιτήματα</a>';
 		if ( $r ) {
-			echo ' · <a href="' . esc_url( SD_Frontend::url( 'aitimata', array( 'print' => $r->id ) ) ) . '">Εκτυπώσιμη μορφή</a> · ' . SD_Exports::links( 'f3', $r->id, 'Λήψη σε Word' ) . '';
+			echo '</p>' . SD_Docs::grid( array( SD_Docs::f3( $r ) ) ) . '<p>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		}
 		echo '</p><h2>Έντυπο 3 · ' . ( $r ? esc_html( 'A' === $r->part ? $r->destination : $r->b_person ) : 'Νέο αίτημα' ) . '</h2>';
 		if ( $r ) {

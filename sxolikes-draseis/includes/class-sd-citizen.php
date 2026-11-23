@@ -633,7 +633,8 @@ class SD_Citizen {
 		$issues = self::issues( $dep, $class );
 		$ro     = $edit ? '' : ' disabled';
 
-		echo '<p><a href="' . esc_url( SD_Frontend::url( 'politis' ) ) . '">← Όλες οι δράσεις</a> · <a href="' . esc_url( SD_Frontend::url( 'politis', array( 'print' => $dep->id ) ) ) . '" target="_blank" rel="noopener">Εκτύπωση</a> · ' . SD_Exports::links( 'f2', $dep->id, 'Word (Έντυπο 2)' ) . ' · ' . SD_Exports::links( 'f2p', $dep->id, 'Word (Πρότυπο Ανάπτυξης Δράσης)' ) . '</p>';
+		echo '<p class="sd-back"><a href="' . esc_url( SD_Frontend::url( 'politis' ) ) . '">← Όλες οι δράσεις</a></p>';
+		echo SD_Docs::grid( array( SD_Docs::f2( $dep ), SD_Docs::card( array( 'type' => 'f2p', 'id' => $dep->id, 'title' => 'Πρότυπο Ανάπτυξης Δράσης', 'sub' => 'Για την πλατφόρμα', 'state' => 'ready', 'pct' => 100 ) ) ), 'Τι βγαίνει από αυτή τη σελίδα' ); // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<h2>Έντυπο 2 · ' . esc_html( SD_Data::class_label( $class ) ) . ': ' . esc_html( $dep->title ) . ' ' . self::badge( $dep->status ) . '</h2>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<p class="sd-meta">Ηλικιακό επίπεδο ΠΣ: ' . esc_html( self::age_group( $class->grade ) ) . '</p>';
 

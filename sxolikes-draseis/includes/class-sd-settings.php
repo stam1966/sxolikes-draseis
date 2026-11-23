@@ -51,6 +51,28 @@ class SD_Settings {
 		return array( true, $back );
 	}
 
+	/** Το πλαίσιο «Για τους/τις εκπαιδευτικούς» για την κεντρική ιστοσελίδα του σχολείου. */
+	public static function site_entry_html() {
+		$url  = SD_Install::app_url();
+		$icon = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V6a2 2 0 0 1 2-2h9l5 5v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 4v5h5M8 13h8M8 17h5"/></svg>';
+		return '<div style="max-width:340px;border-radius:18px;padding:20px 20px 18px;background:linear-gradient(160deg,#2f6f73,#1d4f52);color:#ffffff;font-family:inherit;line-height:1.45;box-sizing:border-box">'
+			. $icon
+			. '<p style="margin:8px 0 4px;font-size:1.15em;font-weight:700;color:#ffffff">Για τους/τις εκπαιδευτικούς</p>'
+			. '<p style="margin:0 0 14px;font-size:.95em;color:#e4f0ef">Εργαστήρια, Ενεργός Πολίτης, επισκέψεις και τα έντυπα της χρονιάς.</p>'
+			. '<a href="' . esc_url( $url ) . '" style="display:inline-block;background:#ffffff;color:#1d4f52;font-weight:700;text-decoration:none;padding:10px 18px;border-radius:999px">Είσοδος στις Σχολικές Δράσεις &rarr;</a>'
+			. '</div>';
+	}
+
+	private static function site_entry() {
+		$html = self::site_entry_html();
+		echo '<section class="sd-card" id="eisodos"><h3>Είσοδος από την ιστοσελίδα του σχολείου</h3>';
+		echo '<p>Βάλτε αυτό το πλαίσιο στην κεντρική ιστοσελίδα του σχολείου, ώστε οι εκπαιδευτικοί να μπαίνουν με ένα κλικ. Οδηγεί στη σύνδεση και μετά στην αρχική τους.</p>';
+		echo '<div style="margin:1rem 0">' . $html . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		echo '<ol class="sd-steps"><li>Στη διαχείριση της κεντρικής ιστοσελίδας: <strong>Εμφάνιση → Widgets</strong> (ή μια σελίδα), προσθέστε μπλοκ <strong>«Προσαρμοσμένη HTML»</strong>.</li><li>Πατήστε «Αντιγραφή» εδώ και επικολλήστε τον κώδικα στο μπλοκ. Αποθήκευση.</li><li>Προαιρετικά, στο <strong>Εμφάνιση → Μενού</strong> προσθέστε «Προσαρμοσμένο σύνδεσμο» με κείμενο «Εκπαιδευτικοί» και διεύθυνση <code>' . esc_html( SD_Install::app_url() ) . '</code>.</li></ol>';
+		echo '<div class="sd-copy"><div class="sd-copy-head"><strong>Κώδικας για το μπλοκ «Προσαρμοσμένη HTML»</strong> <button class="sd-button sd-small" type="button" data-copy>Αντιγραφή</button></div>';
+		echo '<textarea rows="5" readonly>' . esc_textarea( $html ) . '</textarea></div></section>';
+	}
+
 	public static function render() {
 		echo '<h2>Ρυθμίσεις</h2>';
 		SD_Frontend::form_open( 'save_settings' );
@@ -69,6 +91,7 @@ class SD_Settings {
 		echo '<p class="sd-help">Έτοιμη κάρτα τόπου για τη Ροδίτσα και τη Φθιώτιδα, ελεγμένη με επίσημες πηγές (ίδια βάση με τον Χάρτη τόπου). Αντικαθιστά ό,τι έχει γραφτεί παραπάνω.</p>';
 		echo '<p><button class="sd-button sd-small" type="submit" onclick="return confirm(\'Να αντικατασταθεί η κάρτα τόπου με την έτοιμη;\');">Φόρτωση έτοιμης κάρτας τόπου</button></p></form>';
 
+		self::site_entry();
 		SD_Notify::render_settings();
 		SD_AiField::render_settings();
 

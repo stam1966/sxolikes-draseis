@@ -349,7 +349,7 @@ class SD_F4 {
 
 		echo '<p><a href="' . esc_url( SD_Frontend::url( 'apotimisi' ) ) . '">← Όλα τα τμήματα</a>';
 		if ( $f ) {
-			echo ' · <a href="' . esc_url( SD_Frontend::url( 'apotimisi', array( 'print' => $class->id ) ) ) . '">Εκτυπώσιμη μορφή</a> · ' . SD_Exports::links( 'f4', $class->id, 'Λήψη σε Word' ) . '';
+			echo '</p>' . SD_Docs::grid( array( SD_Docs::f4( $class ) ) ) . '<p>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		}
 		echo '</p><h2>Έντυπο 4 · Αποτίμηση · Τμήμα ' . esc_html( SD_Data::class_label( $class ) ) . '</h2><p>' . self::badge( $f ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		if ( $f && $f->review_note && in_array( $f->status, array( 'epistrafike', 'elegxthike' ), true ) ) {

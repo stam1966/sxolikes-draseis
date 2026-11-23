@@ -53,7 +53,7 @@ class SD_Timeline {
 		return $state;
 	}
 
-	private static function deadline_text( $deadline, $state ) {
+	public static function deadline_text( $deadline, $state ) {
 		if ( ! $deadline ) {
 			return '';
 		}
@@ -86,9 +86,9 @@ class SD_Timeline {
 	/**
 	 * Ένα βήμα: title, state, detail, deadline, url, cta.
 	 */
-	private static function step( $title, $state, $detail = '', $url = '', $cta = '', $deadline = '' ) {
+	private static function step( $title, $state, $detail = '', $url = '', $cta = '', $deadline = '', $out = '' ) {
 		$state = self::with_deadline( $state, $deadline );
-		return compact( 'title', 'state', 'detail', 'url', 'cta', 'deadline' );
+		return compact( 'title', 'state', 'detail', 'url', 'cta', 'deadline', 'out' );
 	}
 
 	/* =================== Βήματα τμήματος =================== */
@@ -100,18 +100,19 @@ class SD_Timeline {
 		$f1a   = SD_Workshops::form_of_class( $class->id );
 		$state = $f1a ? self::form_state( $f1a->status ) : 'todo';
 		$steps[] = self::step(
-			'Έντυπο 1Α · Εργαστήρια Δεξιοτήτων',
+			'Σχεδιάστε τα Εργαστήρια της χρονιάς',
 			$state,
 			$f1a ? '' : 'Δεν έχει ξεκινήσει.',
 			SD_Frontend::url( 'ergastiria', array( 'class' => $class->id ) ),
-			in_array( $state, array( 'done', 'review' ), true ) ? 'Προβολή' : 'Συνέχεια',
-			SD_Workshops::deadline()
+			in_array( $state, array( 'done', 'review' ), true ) ? 'Προβολή' : ( $f1a ? 'Συνέχεια' : 'Ξεκινήστε' ),
+			SD_Workshops::deadline(),
+			'Έντυπο 1Α'
 		);
 
 		// 2. Ενεργός Πολίτης (Έντυπο 2): όλες οι δράσεις του τμήματος.
 		$deps = SD_Citizen::of_class( $class->id );
 		if ( ! $deps ) {
-			$steps[] = self::step( 'Ενεργός Πολίτης · Έντυπο 2', 'todo', 'Δεν έχει καταχωριστεί δράση.', SD_Frontend::url( 'politis' ), 'Νέα δράση', self::deadline_f2() );
+			$steps[] = self::step( 'Δράση Ενεργού Πολίτη', 'todo', 'Δεν έχει καταχωριστεί δράση.', SD_Frontend::url( 'politis' ), 'Νέα δράση', self::deadline_f2(), 'Έντυπο 2' );
 		} else {
 			$states = array();
 			foreach ( $deps as $d ) {
@@ -129,18 +130,19 @@ class SD_Timeline {
 					break;
 				}
 			}
-			$steps[] = self::step( 'Ενεργός Πολίτης · Έντυπο 2', $state, implode( ', ', $names ), SD_Frontend::url( 'politis', array( 'id' => $first->id ) ), in_array( $state, array( 'done', 'review' ), true ) ? 'Προβολή' : 'Συνέχεια', self::deadline_f2() );
+			$steps[] = self::step( 'Δράση Ενεργού Πολίτη', $state, implode( ', ', $names ), SD_Frontend::url( 'politis', array( 'id' => $first->id ) ), in_array( $state, array( 'done', 'review' ), true ) ? 'Προβολή' : 'Συνέχεια', self::deadline_f2(), 'Έντυπο 2' );
 		}
 
 		// 3. Σχέδιο Δράσης Τμήματος (Πλατφόρμα 21+).
 		$plan    = SD_ErgPlan::class_plan( $class->id );
 		$steps[] = self::step(
-			'Σχέδιο Δράσης Τμήματος · Πλατφόρμα 21+',
+			'Περιγράψτε τα Εργαστήρια ανά κύκλο',
 			$plan ? 'done' : 'todo',
 			$plan ? 'Αποθηκεύτηκε ' . mysql2date( 'd/m/Y', $plan->updated_at ) . '. Μπορεί να συμπληρώνεται όλη τη χρονιά.' : 'Συμπληρώνεται εν μέρει μόνο του από το 1Α.',
 			SD_Frontend::url( 'ergastiria', array( 'sxedio' => $class->id ) ),
 			$plan ? 'Άνοιγμα' : 'Συμπλήρωση',
-			self::deadline_sxtm()
+			self::deadline_sxtm(),
+			'Σχέδιο Δράσης Τμήματος, Προγραμματισμός'
 		);
 
 		// 4. Επισκέψεις και φορείς (Έντυπο 3): προαιρετικό.
@@ -165,7 +167,7 @@ class SD_Timeline {
 				$parts[] = $l . ': ' . $count[ $k ];
 			}
 		}
-		$steps[] = self::step( 'Επισκέψεις και φορείς · Έντυπο 3', $state, $parts ? implode( ' · ', $parts ) : 'Μόνο όταν η τάξη βγαίνει από το σχολείο ή έρχεται φορέας. Υποβάλλεται 10 εργάσιμες νωρίτερα.', SD_Frontend::url( 'aitimata' ), $reqs ? 'Άνοιγμα' : 'Νέο αίτημα' );
+		$steps[] = self::step( 'Επισκέψεις και καλεσμένοι στο σχολείο', $state, $parts ? implode( ' · ', $parts ) : 'Μόνο όταν η τάξη βγαίνει από το σχολείο ή έρχεται φορέας. Υποβάλλεται 10 εργάσιμες νωρίτερα.', SD_Frontend::url( 'aitimata' ), $reqs ? 'Άνοιγμα' : 'Νέο αίτημα', '', 'Έντυπο 3' );
 
 		// 5. Αποτίμηση (Έντυπο 4).
 		$f4 = SD_F4::form_of_class( $class->id );
@@ -175,7 +177,7 @@ class SD_Timeline {
 			$dl    = SD_F4::deadline();
 			$state = ( $dl && strtotime( $dl ) - strtotime( self::today() ) < 45 * DAY_IN_SECONDS ) || (int) current_time( 'n' ) >= 4 && (int) current_time( 'n' ) <= 7 ? 'todo' : 'later';
 		}
-		$steps[] = self::step( 'Αποτίμηση · Έντυπο 4', $state, 'later' === $state ? 'Στο τέλος της χρονιάς. Προσυμπληρώνεται από το 1Α και το Έντυπο 2.' : '', SD_Frontend::url( 'apotimisi', array( 'class' => $class->id ) ), in_array( $state, array( 'done', 'review' ), true ) ? 'Προβολή' : ( 'later' === $state ? 'Ματιά' : 'Συνέχεια' ), SD_F4::deadline() );
+		$steps[] = self::step( 'Απολογισμός της χρονιάς', $state, 'later' === $state ? 'Στο τέλος της χρονιάς. Προσυμπληρώνεται από το 1Α και το Έντυπο 2.' : '', SD_Frontend::url( 'apotimisi', array( 'class' => $class->id ) ), in_array( $state, array( 'done', 'review' ), true ) ? 'Προβολή' : ( 'later' === $state ? 'Ματιά' : 'Συνέχεια' ), SD_F4::deadline(), 'Έντυπο 4' );
 
 		return $steps;
 	}
@@ -328,6 +330,9 @@ class SD_Timeline {
 					echo ( $s['detail'] ? ' ' : '' ) . '<span class="sd-tl-dl">' . esc_html( $dl ) . '</span>';
 				}
 				echo '</div>';
+			}
+			if ( ! empty( $s['out'] ) ) {
+				echo '<div class="sd-tl-out">Βγάζει: ' . esc_html( $s['out'] ) . '</div>';
 			}
 			echo '</div>';
 			if ( $s['url'] ) {
