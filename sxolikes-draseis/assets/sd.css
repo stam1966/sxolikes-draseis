@@ -804,3 +804,12 @@ a.sd-cell-link:hover .sd-cell { box-shadow: 0 0 0 2px currentColor; }
 details.sd-tl-school > summary { cursor: pointer; list-style: none; }
 details.sd-tl-school > summary::-webkit-details-marker { display: none; }
 details.sd-tl-school > summary h3::after { content: " ▾"; color: var(--sd-muted); font-size: .85em; }
+
+/* 0.19.0 · Εκπαιδευτικοί του σχολείου */
+.sd-staff-pick .sd-chips { margin: .3rem 0 .6rem; }
+.sd-staff-pick .sd-chip small { font-weight: 400; opacity: .75; margin-left: .2rem; }
+.sd-staff-other { display: block; font-weight: 400; font-size: .9rem; color: var(--sd-muted); margin-top: .4rem; }
+.sd-staff-other textarea { margin-top: .3rem; width: 100%; box-sizing: border-box; }
+details.sd-inline-edit { display: inline-block; margin: 0 0 0 .3rem; vertical-align: middle; }
+details.sd-inline-edit[open] { display: block; margin: .6rem 0 0; }
+details.sd-inline-edit > summary { font-size: .88rem; }

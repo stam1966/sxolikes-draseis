@@ -305,6 +305,10 @@ class SD_Wizard {
 					$data[ $f ] = $post[ $f ];
 				}
 			}
+			$staff = SD_Staff::combine( $post, 'teachers' );
+			if ( null !== $staff ) {
+				$data['teachers'] = $staff;
+			}
 			if ( isset( $post['skills_sent'] ) && ! isset( $post['skills'] ) ) {
 				$data['skills'] = array();
 			}
@@ -561,7 +565,14 @@ class SD_Wizard {
 
 	private static function step_4( $class, $c, $vals, $dis, $lock ) {
 		self::q( 'Ποιοι/ποιες συμμετέχουν;', 'Ο/Η υπεύθυνος/η Εργαστηρίων του τμήματος μπαίνει αυτόματα. Γράψτε όσους/όσες άλλους/ες εκπαιδευτικούς βοηθούν σε αυτόν τον κύκλο, ακόμη κι αν δεν είναι στα Σχέδια Δράσης.' );
-		echo '<label class="sd-field">Άλλοι/ες εκπαιδευτικοί<span class="sd-fhint">Ένας/μία σε κάθε γραμμή, π.χ. «Ονοματεπώνυμο, ΠΕ86».</span><textarea name="teachers" rows="3" data-noai' . $dis . '>' . esc_textarea( $vals['teachers'] ) . '</textarea></label>';
+		$resp = array();
+		foreach ( SD_Data::class_teachers( $class->id ) as $t ) {
+			$u = get_userdata( $t->user_id );
+			if ( $u && 'ergastiria' === $t->class_role ) {
+				$resp[] = $u->display_name;
+			}
+		}
+		echo '<fieldset class="sd-field"><legend>Άλλοι/ες εκπαιδευτικοί</legend><span class="sd-fhint">Πατήστε όσους/όσες συμμετέχουν.</span>' . SD_Staff::picker( 'teachers', $vals['teachers'], $resp, $dis ) . '</fieldset>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<label class="sd-field">Χρειάζονται προσαρμογές ώστε να συμμετέχουν όλα τα παιδιά; (προαιρετικό)<span class="sd-fhint">Χωρίς ονόματα μαθητών.</span><textarea name="adaptations" rows="3"' . $dis . '>' . esc_textarea( $vals['adaptations'] ) . '</textarea></label>';
 	}
 

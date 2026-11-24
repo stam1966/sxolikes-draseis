@@ -117,7 +117,7 @@ class SD_Office {
 	 * @param bool  $landscape  οριζόντια σελίδα (για πίνακες με πολλές στήλες).
 	 * @param int   $pt         μέγεθος κειμένου σε στιγμές (οι επικεφαλίδες κλιμακώνονται ανάλογα).
 	 */
-	public static function docx( array $blocks, $landscape = false, $pt = 10 ) {
+	public static function docx( array $blocks, $landscape = false, $pt = 11 ) {
 		$sz = max( 16, min( 32, (int) round( $pt * 2 ) ) ); // μισές στιγμές
 		$st = (int) round( $sz * 1.5 );
 		$sh = (int) round( $sz * 1.2 );
@@ -247,7 +247,7 @@ class SD_Office {
 		return self::zip( $files );
 	}
 
-	public static function send_docx( $filename, array $blocks, $landscape = false, $pt = 10 ) {
+	public static function send_docx( $filename, array $blocks, $landscape = false, $pt = 11 ) {
 		self::send( $filename . '.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', self::docx( $blocks, $landscape, $pt ) );
 	}
 

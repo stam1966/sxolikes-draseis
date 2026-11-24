@@ -32,7 +32,7 @@ class SD_Exports {
 	}
 
 	/** Στέλνει το Word ή, στην προεπισκόπηση, το δείχνει ως σελίδα. */
-	private static function out( $filename, $blocks, $landscape = false, $pt = 10 ) {
+	private static function out( $filename, $blocks, $landscape = false, $pt = 11 ) {
 		if ( ! self::$preview ) {
 			SD_Office::send_docx( $filename, $blocks, $landscape, $pt );
 			return;

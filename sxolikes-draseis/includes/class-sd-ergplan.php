@@ -200,6 +200,12 @@ class SD_ErgPlan {
 		foreach ( array_keys( SD_Workshops::CYCLES ) as $c ) {
 			foreach ( array_keys( self::CLASS_FIELDS ) as $k ) {
 				$cycles[ $c ][ $k ] = self::clean( $post['cy'][ $c ][ $k ] ?? '' );
+				if ( 'teachers' === $k ) {
+					$staff = SD_Staff::combine( $post['cy'][ $c ] ?? array(), 'teachers' );
+					if ( null !== $staff ) {
+						$cycles[ $c ][ $k ] = self::clean( $staff );
+					}
+				}
 			}
 			$sub                      = sanitize_text_field( (string) ( $post['cy'][ $c ]['subtheme'] ?? '' ) );
 			$cycles[ $c ]['subtheme'] = isset( SD_Workshops::cycle_subthemes( $c )[ $sub ] ) ? $sub : '';
@@ -264,7 +270,11 @@ class SD_ErgPlan {
 					echo '<label class="sd-block">' . esc_html( $l ) . '<input type="text" name="' . esc_attr( $field ) . '" value="' . esc_attr( $vals[ $c ][ $k ] ?? '' ) . '"' . $dis . '></label>'; // phpcs:ignore WordPress.Security.EscapeOutput
 					continue;
 				}
-				$rows = 'sequence' === $k ? 7 : ( 'teachers' === $k ? 2 : 3 );
+				if ( 'teachers' === $k ) {
+					echo '<fieldset class="sd-block sd-field"><legend>' . esc_html( 'Άλλοι/ες εκπαιδευτικοί που υλοποιούν εργαστήρια του κύκλου' ) . '</legend>' . SD_Staff::picker( $field, $vals[ $c ][ $k ] ?? '', self::teachers_of( $class ), $dis ) . '</fieldset>'; // phpcs:ignore WordPress.Security.EscapeOutput
+					continue;
+				}
+				$rows = 'sequence' === $k ? 7 : 3;
 				echo '<label class="sd-block">' . esc_html( $l ) . '<textarea rows="' . (int) $rows . '" name="' . esc_attr( $field ) . '"' . ( 'teachers' === $k ? ' data-noai' : '' ) . $dis . '>' . esc_textarea( $vals[ $c ][ $k ] ?? '' ) . '</textarea></label>'; // phpcs:ignore WordPress.Security.EscapeOutput
 			}
 			echo '</details>';
@@ -334,7 +344,7 @@ class SD_ErgPlan {
 	/* =================== Word / Excel =================== */
 
 	/** Ο/Η υπεύθυνος/η Εργαστηρίων του τμήματος (αλλιώς όλοι οι εκπαιδευτικοί του τμήματος). */
-	private static function teachers_of( $class ) {
+	public static function teachers_of( $class ) {
 		$names = array();
 		$all   = array();
 		foreach ( SD_Data::class_teachers( $class->id ) as $t ) {

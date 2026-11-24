@@ -147,7 +147,7 @@ class SD_Plans {
 		if ( ! $plan->coordinator_id ) {
 			$out[] = array( 'warning', 'Δεν έχει οριστεί Συντονιστής/τρια.' );
 		}
-		$team = count( array_unique( array_merge( self::members( $plan->id ), $plan->coordinator_id ? array( (int) $plan->coordinator_id ) : array() ) ) );
+		$team = count( array_unique( array_merge( self::members( $plan->id ), $plan->coordinator_id ? array( (int) $plan->coordinator_id ) : array() ) ) ) + count( SD_Staff::plan_extra( $plan->id ) );
 		if ( $team && ( $team < 2 || $team > 5 ) ) {
 			$out[] = array( 'warning', 'Η ομάδα έχει ' . $team . ' άτομα. Οι οδηγίες του ΙΕΠ αναφέρουν ομάδες 2–5 εκπαιδευτικών.' );
 		}
@@ -344,6 +344,9 @@ class SD_Plans {
 				);
 				$ids = isset( $_POST['members'] ) && is_array( $_POST['members'] ) ? array_map( 'absint', wp_unslash( $_POST['members'] ) ) : array();
 				self::set_members( $plan->id, array_diff( $ids, array( $coord ) ) );
+				if ( ! empty( $_POST['extra_sent'] ) ) {
+					SD_Staff::set_plan_extra( $plan->id, isset( $_POST['extra'] ) && is_array( $_POST['extra'] ) ? wp_unslash( $_POST['extra'] ) : array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- καθαρίζεται στο set_plan_extra().
+				}
 				self::touch( $plan->id );
 				return array( true, $back . '#omada' );
 
@@ -675,6 +678,7 @@ class SD_Plans {
 		foreach ( $members as $m ) {
 			$names[] = self::user_name( $m );
 		}
+		$names = array_merge( $names, SD_Staff::plan_extra( $plan->id ) );
 		echo '<p>Συντονιστής/τρια: <strong>' . esc_html( self::user_name( $plan->coordinator_id ) ? self::user_name( $plan->coordinator_id ) : '—' ) . '</strong><br>Μέλη: ' . esc_html( $names ? implode( ', ', $names ) : '—' ) . '</p>';
 		if ( $plan->team_note ) {
 			echo '<p class="sd-help">Σημείωση (όπως στην πλατφόρμα): ' . esc_html( $plan->team_note ) . '</p>';
@@ -692,7 +696,7 @@ class SD_Plans {
 			foreach ( $users as $u ) {
 				printf( '<label><input type="checkbox" name="members[]" value="%d"%s> %s</label>', (int) $u->ID, in_array( (int) $u->ID, $members, true ) ? ' checked' : '', esc_html( $u->display_name ) );
 			}
-			echo '</div></fieldset><label class="sd-block">Σημείωση ομάδας <input name="team_note" value="' . esc_attr( $plan->team_note ) . '"></label>';
+			echo '</div></fieldset>' . SD_Staff::plan_picker( $plan->id ) . '<label class="sd-block">Σημείωση ομάδας <input name="team_note" value="' . esc_attr( $plan->team_note ) . '"></label>';
 			echo '<p><button class="sd-button" type="submit">Αποθήκευση ομάδας</button></p></form></details>';
 		}
 		echo '</section>';
@@ -819,7 +823,8 @@ class SD_Plans {
 		foreach ( self::members( $plan->id ) as $m ) {
 			$names[] = self::user_name( $m );
 		}
-		$src = array();
+		$names = array_merge( $names, SD_Staff::plan_extra( $plan->id ) );
+		$src   = array();
 		$sel = '' === (string) $plan->sources ? array() : explode( ',', $plan->sources );
 		foreach ( SD_Eval::SOURCES as $k => $l ) {
 			$src[] = ( in_array( $k, $sel, true ) ? '☒ ' : '☐ ' ) . $l;

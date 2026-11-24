@@ -546,12 +546,28 @@
 	}
 	function save( el ) {
 		var name = fieldOf( el );
-		if ( ! name || name === 'skills_sent' || el.type === 'hidden' ) {
+		if ( ! name || name === 'skills_sent' || name === 'teachers_sent' || el.type === 'hidden' ) {
 			return;
 		}
 		var m = name.match( /^order\[(\d+)\]$/ );
 		if ( m ) {
 			send( 'order', el.value, { unit: m[ 1 ] } );
+			return;
+		}
+		if ( name === 'teachers_pick' || name === 'teachers_other' ) {
+			var lines = [];
+			form.querySelectorAll( 'input[name="teachers_pick[]"]:checked' ).forEach( function ( c ) {
+				lines.push( c.value );
+			} );
+			var other = form.querySelector( 'textarea[name="teachers_other"]' );
+			if ( other ) {
+				other.value.split( /\r?\n/ ).forEach( function ( l ) {
+					if ( l.trim() ) {
+						lines.push( l.trim() );
+					}
+				} );
+			}
+			send( 'teachers', lines.join( '\n' ) );
 			return;
 		}
 		if ( name === 'skills' ) {
