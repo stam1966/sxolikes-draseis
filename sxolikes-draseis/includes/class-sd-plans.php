@@ -152,10 +152,10 @@ class SD_Plans {
 			$out[] = array( 'warning', 'Η ομάδα έχει ' . $team . ' άτομα. Οι οδηγίες του ΙΕΠ αναφέρουν ομάδες 2–5 εκπαιδευτικών.' );
 		}
 		if ( '' === trim( $plan->purpose ) ) {
-			$out[] = array( 'error', 'Λείπει ο σκοπός.' );
+			$out[] = array( 'error', 'Λείπει ο σκοπός / βασική κατεύθυνση.' );
 		}
 		if ( '' === trim( $plan->need ) ) {
-			$out[] = array( 'error', 'Λείπει η τεκμηρίωση της αναγκαιότητας.' );
+			$out[] = array( 'error', 'Λείπει η αρχική ανάγκη.' );
 		}
 		if ( SD_Eval::length( $plan->purpose ) > SD_Eval::PURPOSE_LIMIT ) {
 			$out[] = array( 'error', 'Ο σκοπός ξεπερνά τους ' . SD_Eval::PURPOSE_LIMIT . ' χαρακτήρες.' );
@@ -175,7 +175,7 @@ class SD_Plans {
 		foreach ( $goals as $i => $g ) {
 			$n = 'Στόχος ' . ( $i + 1 );
 			if ( '' === trim( $g->description ) ) {
-				$out[] = array( 'error', $n . ': λείπει η διατύπωση.' );
+				$out[] = array( 'error', $n . ': λείπει η περιγραφή του στόχου.' );
 			} elseif ( SD_Eval::length( $g->description ) > SD_Eval::LIMIT ) {
 				$out[] = array( 'error', $n . ': η διατύπωση ξεπερνά τους ' . SD_Eval::LIMIT . ' χαρακτήρες.' );
 			}
@@ -198,9 +198,9 @@ class SD_Plans {
 					$out[] = array( 'error', $n . ', ενέργεια ' . $k . ': η περιγραφή ξεπερνά τους ' . SD_Eval::LIMIT . ' χαρακτήρες.' );
 				}
 				if ( ! $a->start_date || ! $a->end_date ) {
-					$out[] = array( 'error', $n . ', ενέργεια ' . $k . ': λείπουν οι ημερομηνίες.' );
+					$out[] = array( 'error', $n . ', ενέργεια ' . $k . ': λείπει ο μήνας έναρξης ή λήξης.' );
 				} elseif ( $a->end_date < $a->start_date ) {
-					$out[] = array( 'error', $n . ', ενέργεια ' . $k . ': η λήξη είναι πριν από την έναρξη.' );
+					$out[] = array( 'error', $n . ', ενέργεια ' . $k . ': ο μήνας λήξης είναι πριν από τον μήνα έναρξης.' );
 				}
 				if ( 'apotimisi' === $a->kind && '' === trim( $a->criterion ) ) {
 					$out[] = array( 'error', $n . ': η ενέργεια αποτίμησης χρειάζεται κριτήριο επιτυχίας.' );
@@ -500,8 +500,9 @@ class SD_Plans {
 		return $out;
 	}
 
+	/** Οι ενέργειες ορίζονται σε μήνες, όπως στην πλατφόρμα του ΙΕΠ. */
 	private static function fmt_date( $d ) {
-		return $d ? mysql2date( 'd/m/Y', $d ) : '—';
+		return $d ? ( SD_PlanUI::MONTHS[ (int) substr( (string) $d, 5, 2 ) ] ?? '' ) . ' ' . substr( (string) $d, 0, 4 ) : '—';
 	}
 
 	private static function grades_text( $csv ) {
@@ -523,7 +524,7 @@ class SD_Plans {
 		} elseif ( isset( $_GET['copy'] ) ) {
 			self::render_copy( absint( $_GET['copy'] ) );
 		} elseif ( isset( $_GET['id'] ) ) {
-			self::render_plan( absint( $_GET['id'] ) );
+			SD_PlanUI::render( absint( $_GET['id'] ) );
 		} else {
 			self::render_list();
 		}
@@ -595,6 +596,69 @@ class SD_Plans {
 			}
 			echo '</select></label><button class="sd-button" type="submit">Δημιουργία</button></div></form></section>';
 		}
+	}
+
+	/** Φόρμα «Στοιχεία σχεδίου» (τίτλος, άξονας, σκοπός, αρχική ανάγκη, πηγές). */
+	public static function render_info_form( $plan ) {
+		SD_Frontend::form_open( 'save_plan' );
+		echo '<input type="hidden" name="plan_id" value="' . (int) $plan->id . '">';
+		echo '<div class="sd-row"><label>Κωδικός <input name="code" size="5" value="' . esc_attr( $plan->code ) . '"></label>';
+		echo '<label class="sd-grow">Τίτλος <input name="title" required value="' . esc_attr( $plan->title ) . '"></label></div>';
+		echo '<label class="sd-block">Άξονας <select name="axis">';
+		foreach ( SD_Eval::AXES as $n => $a ) {
+			echo '<option value="' . (int) $n . '"' . selected( (int) $plan->axis, $n, false ) . '>' . (int) $n . '. ' . esc_html( $a[0] ) . '</option>';
+		}
+		echo '</select></label>';
+		echo '<fieldset class="sd-sub"><legend>Δείκτες του άξονα (ενδεικτικοί, προαιρετικοί)</legend>';
+		self::checks( 'indicators', SD_Eval::indicators_of( $plan->axis ), $plan->indicators );
+		echo '<p class="sd-help">Αν αλλάξετε άξονα, αποθηκεύστε και μετά διαλέξτε δείκτες.</p></fieldset>';
+		echo '<label class="sd-block">Σκοπός / Βασική κατεύθυνση';
+		self::textarea( 'purpose', $plan->purpose, SD_Eval::PURPOSE_LIMIT, 5 );
+		echo '</label><label class="sd-block">Αρχική Ανάγκη (τεκμηρίωση αναγκαιότητας)';
+		self::textarea( 'need', $plan->need, SD_Eval::PURPOSE_LIMIT, 5 );
+		echo '</label><fieldset class="sd-sub"><legend>Πηγές τεκμηρίωσης</legend>';
+		self::checks( 'sources', SD_Eval::SOURCES, $plan->sources );
+		echo '</fieldset><div class="sd-row"><label>Πράξη Συλλόγου Διδασκόντων <input name="praxi" size="18" value="' . esc_attr( $plan->praxi ) . '" placeholder="π.χ. 12/20-10-2026"></label>';
+		foreach ( array( 'continuation' => 'Συνέχεια προηγούμενου σχεδίου', 'collab' => 'Συνεργασία με άλλο σχολείο' ) as $f => $l ) {
+			echo '<label>' . esc_html( $l ) . ' <select name="' . esc_attr( $f ) . '"><option value="">—</option>';
+			foreach ( SD_Eval::YES_NO as $k => $v ) {
+				echo '<option value="' . esc_attr( $k ) . '"' . selected( $plan->$f, $k, false ) . '>' . esc_html( $v ) . '</option>';
+			}
+			echo '</select></label>';
+		}
+		echo '</div><label class="sd-block">Με ποιο σχολείο (αν υπάρχει συνεργασία) <input name="collab_note" value="' . esc_attr( $plan->collab_note ) . '"></label>';
+		echo '<p><button class="sd-button" type="submit">Αποθήκευση στοιχείων</button></p></form>';
+	}
+
+	/** Η Ομάδα Δράσης: προβολή και, για τη Διεύθυνση, ορισμός (και με εκπαιδευτικούς χωρίς λογαριασμό). */
+	public static function render_team( $plan ) {
+		$members = self::members( $plan->id );
+		$names = array();
+		foreach ( $members as $m ) {
+			$names[] = self::user_name( $m );
+		}
+		$names = array_merge( $names, SD_Staff::plan_extra( $plan->id ) );
+		echo '<p>Συντονιστής/τρια: <strong>' . esc_html( self::user_name( $plan->coordinator_id ) ? self::user_name( $plan->coordinator_id ) : '—' ) . '</strong><br>Μέλη: ' . esc_html( $names ? implode( ', ', $names ) : '—' ) . '</p>';
+		if ( $plan->team_note ) {
+			echo '<p class="sd-help">Σημείωση (όπως στην πλατφόρμα): ' . esc_html( $plan->team_note ) . '</p>';
+		}
+		if ( current_user_can( SD_Roles::CAP_MANAGE ) ) {
+			$users = SD_Roles::app_users();
+			echo '<details open><summary>Ορισμός ομάδας</summary>';
+			SD_Frontend::form_open( 'save_team' );
+			echo '<input type="hidden" name="plan_id" value="' . (int) $plan->id . '">';
+			echo '<label class="sd-block">Συντονιστής/τρια <select name="coordinator_id"><option value="0">—</option>';
+			foreach ( $users as $u ) {
+				echo '<option value="' . (int) $u->ID . '"' . selected( (int) $plan->coordinator_id, (int) $u->ID, false ) . '>' . esc_html( $u->display_name ) . '</option>';
+			}
+			echo '</select></label><fieldset class="sd-sub"><legend>Μέλη</legend><div class="sd-checks">';
+			foreach ( $users as $u ) {
+				printf( '<label><input type="checkbox" name="members[]" value="%d"%s> %s</label>', (int) $u->ID, in_array( (int) $u->ID, $members, true ) ? ' checked' : '', esc_html( $u->display_name ) );
+			}
+			echo '</div></fieldset>' . SD_Staff::plan_picker( $plan->id ) . '<label class="sd-block">Σημείωση ομάδας <input name="team_note" value="' . esc_attr( $plan->team_note ) . '"></label>';
+			echo '<p><button class="sd-button" type="submit">Αποθήκευση ομάδας</button></p></form></details>';
+		}
+
 	}
 
 	private static function render_plan( $plan_id ) {
@@ -870,12 +934,12 @@ class SD_Plans {
 			$rows[] = array( 'Ενέργειες υλοποίησης', '' );
 			foreach ( $impl as $k => $a ) {
 				$rows[] = array( 'Περιγραφή ενέργειας ' . ( $k + 1 ), $a->description );
-				$rows[] = array( 'Ημερομηνία έναρξης – λήξης', self::fmt_date( $a->start_date ) . ' – ' . self::fmt_date( $a->end_date ) );
+				$rows[] = array( 'Μήνας έναρξης – λήξης', self::fmt_date( $a->start_date ) . ' – ' . self::fmt_date( $a->end_date ) );
 			}
 			$rows[] = array( 'Ενέργειες αποτίμησης', '' );
 			foreach ( $eval as $k => $a ) {
 				$rows[] = array( 'Περιγραφή ενέργειας ' . ( $k + 1 ), $a->description );
-				$rows[] = array( 'Ημερομηνία έναρξης – λήξης', self::fmt_date( $a->start_date ) . ' – ' . self::fmt_date( $a->end_date ) );
+				$rows[] = array( 'Μήνας έναρξης – λήξης', self::fmt_date( $a->start_date ) . ' – ' . self::fmt_date( $a->end_date ) );
 			}
 			$rows[] = array( 'Κριτήρια επιτυχίας', implode( "\n", $criteria ) );
 			$rows[] = array( 'Εργαλεία', self::boxes( SD_Eval::TOOLS, $g->tools, $g->tools_other ) );

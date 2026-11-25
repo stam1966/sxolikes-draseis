@@ -833,3 +833,123 @@
 		}
 	}
 }() );
+
+/* Σχέδιο Δράσης όπως στην πλατφόρμα του ΙΕΠ: εσωτερικές καρτέλες, ενέργειες, βοήθεια πεδίου, επιβεβαίωση. */
+( function () {
+	'use strict';
+	var form = document.querySelector( 'form[data-pt-goal]' );
+	if ( form ) {
+		// Καρτέλες «Ενέργειες» / «Εργαλεία / Τρόπος Εργασίας».
+		var tabs = form.querySelectorAll( '[data-itab]' );
+		function show( name ) {
+			tabs.forEach( function ( t ) {
+				t.setAttribute( 'aria-selected', t.getAttribute( 'data-itab' ) === name ? 'true' : 'false' );
+			} );
+			form.querySelectorAll( '[data-ipanel]' ).forEach( function ( p ) {
+				p.hidden = p.getAttribute( 'data-ipanel' ) !== name;
+			} );
+		}
+		tabs.forEach( function ( t ) {
+			t.addEventListener( 'click', function () {
+				show( t.getAttribute( 'data-itab' ) );
+			} );
+		} );
+		show( 'energeies' );
+
+		// Ενέργειες: αρίθμηση, είδος, διαγραφή, προσθήκη.
+		var count = form.querySelector( '[data-act-count]' );
+		var add = form.querySelector( '[data-add-act]' );
+		function cards() {
+			return Array.prototype.slice.call( form.querySelectorAll( '[data-act]' ) );
+		}
+		function refresh() {
+			var n = 0;
+			var y = 0;
+			cards().forEach( function ( c ) {
+				var kind = c.querySelector( '[data-kind]' );
+				var del = c.querySelector( '[data-del]' );
+				var on = ! c.hidden && ! ( del && del.checked );
+				c.classList.toggle( 'is-deleted', !! ( del && del.checked ) );
+				if ( kind ) {
+					c.classList.toggle( 'sd-pt-act-apotimisi', kind.value === 'apotimisi' );
+					c.classList.toggle( 'sd-pt-act-ylopoiisi', kind.value !== 'apotimisi' );
+					var lab = c.querySelector( '[data-kind-label]' );
+					if ( lab && on ) {
+						if ( kind.value === 'apotimisi' ) {
+							lab.textContent = 'Ενέργεια Αποτίμησης';
+						} else {
+							y++;
+							lab.textContent = 'Ενέργεια Υλοποίησης ' + y;
+						}
+					}
+				}
+				n += on ? 1 : 0;
+			} );
+			if ( count ) {
+				count.textContent = n;
+			}
+			if ( add ) {
+				add.disabled = ! form.querySelector( '[data-act][data-empty][hidden]' ) || n >= 3;
+			}
+		}
+		form.addEventListener( 'change', function ( e ) {
+			if ( e.target.matches( '[data-kind], [data-del]' ) ) {
+				refresh();
+			}
+		} );
+		if ( add ) {
+			add.addEventListener( 'click', function () {
+				var next = form.querySelector( '[data-act][data-empty][hidden]' );
+				if ( next ) {
+					next.hidden = false;
+					var ta = next.querySelector( 'textarea' );
+					if ( ta ) {
+						ta.focus();
+					}
+				}
+				refresh();
+			} );
+		}
+		refresh();
+	}
+
+	// Βοήθεια πεδίου στη δεξιά στήλη.
+	var help = document.querySelector( '[data-field-help]' );
+	if ( help ) {
+		document.addEventListener( 'focusin', function ( e ) {
+			var box = e.target.closest && e.target.closest( '[data-help]' );
+			if ( box ) {
+				help.textContent = box.getAttribute( 'data-help' );
+			}
+		} );
+	}
+
+	// «Επιβεβαίωση πριν από την καταχώριση»: θυμάται τα τικ για αυτή την έκδοση του σχεδίου.
+	var list = document.querySelector( '[data-confirm]' );
+	var go = document.querySelector( '[data-confirm-go]' );
+	if ( list && go ) {
+		var key = list.getAttribute( 'data-confirm' );
+		var boxes = list.querySelectorAll( '[data-confirm-box]' );
+		var saved = [];
+		try {
+			saved = JSON.parse( localStorage.getItem( key ) || '[]' );
+		} catch ( e ) {}
+		boxes.forEach( function ( b, i ) {
+			b.checked = saved[ i ] === 1;
+		} );
+		function upd() {
+			var all = true;
+			var st = [];
+			boxes.forEach( function ( b ) {
+				all = all && b.checked;
+				st.push( b.checked ? 1 : 0 );
+			} );
+			go.classList.toggle( 'is-ready', all && ! go.classList.contains( 'is-off' ) );
+			try {
+				localStorage.setItem( key, JSON.stringify( st ) );
+			} catch ( e ) {}
+		}
+		list.addEventListener( 'change', upd );
+		upd();
+	}
+}() );

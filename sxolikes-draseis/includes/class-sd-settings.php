@@ -44,7 +44,7 @@ class SD_Settings {
 		}
 		$dl4 = isset( $_POST['deadline_f4'] ) ? sanitize_text_field( wp_unslash( $_POST['deadline_f4'] ) ) : '';
 		update_option( SD_F4::OPT_DEADLINE, preg_match( '/^\d{4}-\d{2}-\d{2}$/', $dl4 ) ? $dl4 : '' );
-		foreach ( array( 'deadline_f2' => SD_Timeline::OPT_DEADLINE_F2, 'deadline_sxtm' => SD_Timeline::OPT_DEADLINE_SXTM ) as $field => $opt ) {
+		foreach ( array( 'deadline_f2' => SD_Timeline::OPT_DEADLINE_F2, 'deadline_sxtm' => SD_Timeline::OPT_DEADLINE_SXTM, 'deadline_plans' => SD_PlanUI::OPT_DEADLINE ) as $field => $opt ) {
 			$v = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
 			update_option( $opt, preg_match( '/^\d{4}-\d{2}-\d{2}$/', $v ) ? $v : '' );
 		}
@@ -78,6 +78,7 @@ class SD_Settings {
 		SD_Frontend::form_open( 'save_settings' );
 		echo '<section class="sd-card"><label class="sd-block">Όνομα σχολείου (κεφαλίδα και εκτυπώσεις) <input name="school_name" value="' . esc_attr( SD_Frontend::school_name() ) . '"></label>';
 		echo '<label class="sd-block">Λογότυπο σχολείου (διεύθυνση εικόνας, π.χ. το εικονίδιο της ιστοσελίδας του σχολείου· κενό = το εικονίδιο του ιστότοπου ή «ΣΔ») <input type="url" name="logo_url" value="' . esc_attr( (string) get_option( 'sd_logo_url', '' ) ) . '" placeholder="https://…/favicon-150x150.png"></label>';
+		echo '<label class="sd-block">Προθεσμία καταχώρισης Σχεδίων Δράσης στην πλατφόρμα του ΙΕΠ (προαιρετικό) <input type="date" name="deadline_plans" value="' . esc_attr( SD_PlanUI::deadline() ) . '"></label>';
 		echo '<label class="sd-block">Προθεσμία υποβολής Εντύπου 1Α <input type="date" name="deadline_f1a" value="' . esc_attr( SD_Workshops::deadline() ) . '"></label>';
 		echo '<label class="sd-block">Προθεσμία Εντύπου 2 · Ενεργός Πολίτης (προαιρετικό) <input type="date" name="deadline_f2" value="' . esc_attr( SD_Timeline::deadline_f2() ) . '"></label>';
 		echo '<label class="sd-block">Προθεσμία Σχεδίου Δράσης Τμήματος · Πλατφόρμα 21+ (προαιρετικό) <input type="date" name="deadline_sxtm" value="' . esc_attr( SD_Timeline::deadline_sxtm() ) . '"></label>';
