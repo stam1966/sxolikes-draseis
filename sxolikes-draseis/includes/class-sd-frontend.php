@@ -140,7 +140,7 @@ class SD_Frontend {
 		$result = true;
 
 		$plans = SD_Plans::handle( $do );
-		foreach ( array( 'SD_Workshops', 'SD_Citizen', 'SD_Settings', 'SD_Map', 'SD_Requests', 'SD_F4', 'SD_Users', 'SD_ErgPlan', 'SD_AiField', 'SD_PlanImport', 'SD_Notify', 'SD_Wizard', 'SD_Staff', 'SD_PlanUI' ) as $module ) {
+		foreach ( array( 'SD_Workshops', 'SD_Citizen', 'SD_Settings', 'SD_Map', 'SD_Requests', 'SD_F4', 'SD_Users', 'SD_ErgPlan', 'SD_AiField', 'SD_PlanImport', 'SD_Notify', 'SD_Wizard', 'SD_Staff', 'SD_PlanUI', 'SD_Archive' ) as $module ) {
 			if ( null === $plans ) {
 				$plans = $module::handle( $do );
 			}
@@ -311,7 +311,7 @@ class SD_Frontend {
 		$h    .= '<a class="sd-help-btn" href="' . esc_url( self::url( 'voitheia' ) ) . '"' . ( 'voitheia' === $cur ? ' aria-current="page"' : '' ) . '>Βοήθεια</a>';
 		$h    .= '<span class="sd-user-txt"><strong>' . esc_html( $user->display_name ) . '</strong><small>' . esc_html( trim( $role . ( $year ? ' · ' . $year->label : '' ), ' ·' ) ) . '</small></span>';
 		$h    .= '<span class="sd-avatar" aria-hidden="true">' . esc_html( $init ) . '</span>';
-		$h    .= '<a class="sd-logout" href="' . esc_url( wp_logout_url( SD_Install::app_url() ) ) . '">Αποσύνδεση</a>';
+		$h    .= '<a class="sd-logout" href="' . esc_url( wp_logout_url( SD_Install::app_url() ) ) . '" title="Αποσύνδεση" aria-label="Αποσύνδεση">' . SD_Docs::icon( 'logout' ) . '<span class="sd-logout-txt">Αποσύνδεση</span></a>';
 		return $h . '</div>';
 	}
 
@@ -646,9 +646,11 @@ class SD_Frontend {
 	private static function screen_years() {
 		echo '<h2>Σχολικό έτος</h2>';
 		echo '<table class="sd-table"><thead><tr><th>Έτος</th><th>Κατάσταση</th><th></th></tr></thead><tbody>';
+		$act = SD_Data::active_year();
 		foreach ( SD_Data::years() as $y ) {
-			echo '<tr><td><strong>' . esc_html( $y->label ) . '</strong></td><td>' . ( $y->is_active ? 'Τρέχον' : '' ) . '</td><td>';
-			if ( ! $y->is_active ) {
+			$old = $act && ! $y->is_active && $y->starts_on < $act->starts_on;
+			echo '<tr><td><strong>' . esc_html( $y->label ) . '</strong></td><td>' . ( $y->is_active ? 'Τρέχον' : ( $old ? 'Αρχείο' : '' ) ) . '</td><td>';
+			if ( ! $y->is_active && ! $old ) {
 				self::form_open( 'activate_year' );
 				echo '<input type="hidden" name="year_id" value="' . (int) $y->id . '"><button class="sd-button sd-small" type="submit">Ορισμός ως τρέχον</button></form>';
 			}
@@ -661,6 +663,7 @@ class SD_Frontend {
 		self::form_open( 'add_year' );
 		echo '<div class="sd-row"><label>Ξεκινά τον Σεπτέμβριο του <input type="number" name="start_year" min="2020" max="2100" value="' . (int) $next . '" required></label>';
 		echo '<button class="sd-button" type="submit">Δημιουργία</button></div>';
-		echo '<p class="sd-help">Τα δεδομένα κάθε έτους μένουν χωριστά. Το νέο έτος γίνεται τρέχον μόνο όταν το ορίσετε.</p></form></section>';
+		echo '<p class="sd-help">Τα δεδομένα κάθε έτους μένουν χωριστά. Το νέο έτος γίνεται τρέχον μόνο όταν το ορίσετε.</p></form>';
+		echo '<p class="sd-help">Για Σχέδια Δράσης <strong>προηγούμενων ετών</strong> δεν χρειάζεται να δημιουργήσετε έτος εδώ: χρησιμοποιήστε το <a href="' . esc_url( SD_Archive::url() ) . '">Αρχείο προηγούμενων ετών</a>, όπου τα εισάγετε από την πλατφόρμα.</p></section>';
 	}
 }

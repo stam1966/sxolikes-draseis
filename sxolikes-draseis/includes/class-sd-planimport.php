@@ -36,7 +36,7 @@ class SD_PlanImport {
 		return trim( preg_replace( '/\s+/u', ' ', $s ) );
 	}
 
-	private static function lines( $text ) {
+	public static function lines( $text ) {
 		$text = str_replace( array( "\r\n", "\r", "\xC2\xA0", "\t" ), array( "\n", "\n", ' ', "\n" ), (string) $text );
 		$out  = array();
 		foreach ( explode( "\n", $text ) as $l ) {
@@ -572,15 +572,31 @@ class SD_PlanImport {
 		if ( ! is_array( $res ) || empty( $res['goals'] ) ) {
 			return array( new WP_Error( 'sd', 'Η προεπισκόπηση έληξε. Επικολλήστε ξανά το κείμενο.' ), $page );
 		}
+		$use = array();
+		foreach ( array( 'title', 'axis', 'purpose', 'need', 'sources', 'praxi', 'continuation', 'collab' ) as $f ) {
+			$use[ $f ] = ! empty( $_POST[ 'use_' . $f ] );
+		}
+		self::apply( $plan->id, $res, $use );
+		delete_transient( self::key( $plan->id ) );
+		set_transient( 'sd_msg_' . get_current_user_id(), array( 'ok', 'Η εισαγωγή ολοκληρώθηκε. Στο «Λείπουν ακόμη» φαίνεται ό,τι χρειάζεται συμπλήρωση.' ), 60 );
+		return array( true, SD_Frontend::url( 'sxedia', array( 'id' => $plan->id, 'tab' => 'episkopisi' ) ) );
+	}
+
+	/**
+	 * Γράφει στο σχέδιο ό,τι αναγνωρίστηκε: αντικαθιστά τη στοχοθεσία και,
+	 * όπου $use[πεδίο] είναι αληθές, ενημερώνει και τα δομικά στοιχεία.
+	 */
+	public static function apply( $plan_id, $res, $use ) {
+		$plan_id = (int) $plan_id;
 		global $wpdb;
-		foreach ( SD_Plans::goals( $plan->id ) as $g ) {
+		foreach ( SD_Plans::goals( $plan_id ) as $g ) {
 			SD_Plans::delete_goal( $g->id );
 		}
 		foreach ( $res['goals'] as $gi => $g ) {
 			$wpdb->insert(
 				SD_Data::table( 'goals' ),
 				array(
-					'plan_id'     => $plan->id,
+					'plan_id'     => $plan_id,
 					'ord'         => $gi + 1,
 					'title'       => sanitize_text_field( $g['title'] ),
 					'description' => sanitize_textarea_field( $g['description'] ),
@@ -608,32 +624,29 @@ class SD_PlanImport {
 			}
 		}
 		$upd = array( 'updated_at' => current_time( 'mysql' ) );
-		if ( ! empty( $_POST['use_title'] ) && '' !== $res['title'] ) {
+		if ( ! empty( $use['title'] ) && '' !== $res['title'] ) {
 			$upd['title'] = sanitize_text_field( mb_substr( $res['title'], 0, 255 ) );
 		}
 		foreach ( array( 'purpose', 'need' ) as $f ) {
-			if ( ! empty( $_POST[ 'use_' . $f ] ) && '' !== $res[ $f ] ) {
+			if ( ! empty( $use[ $f ] ) && '' !== $res[ $f ] ) {
 				$upd[ $f ] = sanitize_textarea_field( mb_substr( $res[ $f ], 0, SD_Eval::PURPOSE_LIMIT ) );
 			}
 		}
-		if ( ! empty( $_POST['use_axis'] ) && ! empty( $res['axis'] ) && isset( SD_Eval::AXES[ (int) $res['axis'] ] ) ) {
+		if ( ! empty( $use['axis'] ) && ! empty( $res['axis'] ) && isset( SD_Eval::AXES[ (int) $res['axis'] ] ) ) {
 			$upd['axis'] = (int) $res['axis'];
 		}
-		if ( ! empty( $_POST['use_sources'] ) && ! empty( $res['sources'] ) ) {
+		if ( ! empty( $use['sources'] ) && ! empty( $res['sources'] ) ) {
 			$upd['sources'] = implode( ',', array_intersect( array_keys( SD_Eval::SOURCES ), $res['sources'] ) );
 		}
-		if ( ! empty( $_POST['use_praxi'] ) && ! empty( $res['praxi'] ) ) {
+		if ( ! empty( $use['praxi'] ) && ! empty( $res['praxi'] ) ) {
 			$upd['praxi'] = sanitize_text_field( $res['praxi'] );
 		}
 		foreach ( array( 'continuation', 'collab' ) as $f ) {
-			if ( ! empty( $_POST[ 'use_' . $f ] ) && ! empty( $res[ $f ] ) && isset( SD_Eval::YES_NO[ $res[ $f ] ] ) ) {
+			if ( ! empty( $use[ $f ] ) && ! empty( $res[ $f ] ) && isset( SD_Eval::YES_NO[ $res[ $f ] ] ) ) {
 				$upd[ $f ] = $res[ $f ];
 			}
 		}
-		$wpdb->update( SD_Data::table( 'plans' ), $upd, array( 'id' => $plan->id ) );
-		delete_transient( self::key( $plan->id ) );
-		set_transient( 'sd_msg_' . get_current_user_id(), array( 'ok', 'Η εισαγωγή ολοκληρώθηκε. Στο «Λείπουν ακόμη» φαίνεται ό,τι χρειάζεται συμπλήρωση.' ), 60 );
-		return array( true, SD_Frontend::url( 'sxedia', array( 'id' => $plan->id, 'tab' => 'episkopisi' ) ) );
+		$wpdb->update( SD_Data::table( 'plans' ), $upd, array( 'id' => $plan_id ) );
 	}
 
 	/* =================== Οθόνη =================== */
@@ -650,7 +663,7 @@ class SD_PlanImport {
 	}
 
 	/** Τα δομικά στοιχεία που αναγνωρίστηκαν: [[πεδίο, ετικέτα, τιμή]]. */
-	private static function found_fields( $res ) {
+	public static function found_fields( $res ) {
 		$out = array();
 		if ( '' !== ( $res['title'] ?? '' ) ) {
 			$out[] = array( 'title', 'Τίτλος σχεδίου', $res['title'] );
@@ -676,6 +689,35 @@ class SD_PlanImport {
 			}
 		}
 		return $out;
+	}
+
+	/** Προεπισκόπηση: δομικά στοιχεία και στόχοι με τις ενέργειές τους. */
+	public static function preview( $res ) {
+		$found = self::found_fields( $res );
+		if ( $found ) {
+			echo '<h4>Δομικά στοιχεία που βρέθηκαν</h4><dl class="sd-dl">';
+			foreach ( $found as $f ) {
+				echo '<dt>' . esc_html( $f[1] ) . '</dt><dd>' . esc_html( $f[2] ) . '</dd>';
+			}
+			echo '</dl>';
+		}
+		foreach ( $res['goals'] as $i => $g ) {
+			echo '<div class="sd-imp-goal"><h4>Στόχος ' . (int) ( $i + 1 ) . ( $g['title'] ? ': ' . esc_html( $g['title'] ) : '' ) . '</h4>';
+			echo '<p>' . esc_html( $g['description'] ) . ' <span class="sd-meta">(' . (int) SD_Eval::length( $g['description'] ) . '/' . (int) SD_Eval::LIMIT . ')</span></p>';
+			echo '<p class="sd-meta"><strong>Εργαλεία:</strong> ' . esc_html( self::names( $g['tools'], SD_Eval::TOOLS, $g['tools_other'] ) ) . '<br><strong>Τρόποι εργασίας:</strong> ' . esc_html( self::names( $g['ways'], SD_Eval::WAYS, $g['ways_other'] ) ) . '</p><ol class="sd-imp-acts">';
+			foreach ( $g['actions'] as $a ) {
+				echo '<li><span class="sd-badge sd-kind-' . esc_attr( $a['kind'] ) . '">' . esc_html( SD_Eval::ACTION_KINDS[ $a['kind'] ] ) . '</span> ' . esc_html( $a['description'] );
+				$mn = function ( $d ) {
+					return $d ? ( SD_PlanUI::MONTHS[ (int) substr( $d, 5, 2 ) ] ?? '' ) . ' ' . substr( $d, 0, 4 ) : '—';
+				};
+				echo ' <span class="sd-meta">' . esc_html( $mn( $a['start_date'] ) . ' – ' . $mn( $a['end_date'] ) ) . '</span>';
+				if ( $a['criterion'] ) {
+					echo '<div class="sd-criterion"><strong>Κριτήριο επιτυχίας:</strong> ' . esc_html( $a['criterion'] ) . '</div>';
+				}
+				echo '</li>';
+			}
+			echo '</ol></div>';
+		}
 	}
 
 	public static function render( $plan_id ) {
@@ -708,31 +750,8 @@ class SD_PlanImport {
 			}
 			echo '</ul></div>';
 		}
+		self::preview( $res );
 		$found = self::found_fields( $res );
-		if ( $found ) {
-			echo '<h4>Δομικά στοιχεία που βρέθηκαν</h4><dl class="sd-dl">';
-			foreach ( $found as $f ) {
-				echo '<dt>' . esc_html( $f[1] ) . '</dt><dd>' . esc_html( $f[2] ) . '</dd>';
-			}
-			echo '</dl>';
-		}
-		foreach ( $res['goals'] as $i => $g ) {
-			echo '<div class="sd-imp-goal"><h4>Στόχος ' . (int) ( $i + 1 ) . ( $g['title'] ? ': ' . esc_html( $g['title'] ) : '' ) . '</h4>';
-			echo '<p>' . esc_html( $g['description'] ) . ' <span class="sd-meta">(' . (int) SD_Eval::length( $g['description'] ) . '/' . (int) SD_Eval::LIMIT . ')</span></p>';
-			echo '<p class="sd-meta"><strong>Εργαλεία:</strong> ' . esc_html( self::names( $g['tools'], SD_Eval::TOOLS, $g['tools_other'] ) ) . '<br><strong>Τρόποι εργασίας:</strong> ' . esc_html( self::names( $g['ways'], SD_Eval::WAYS, $g['ways_other'] ) ) . '</p><ol class="sd-imp-acts">';
-			foreach ( $g['actions'] as $a ) {
-				echo '<li><span class="sd-badge sd-kind-' . esc_attr( $a['kind'] ) . '">' . esc_html( SD_Eval::ACTION_KINDS[ $a['kind'] ] ) . '</span> ' . esc_html( $a['description'] );
-				$mn = function ( $d ) {
-					return $d ? ( SD_PlanUI::MONTHS[ (int) substr( $d, 5, 2 ) ] ?? '' ) . ' ' . substr( $d, 0, 4 ) : '—';
-				};
-				echo ' <span class="sd-meta">' . esc_html( $mn( $a['start_date'] ) . ' – ' . $mn( $a['end_date'] ) ) . '</span>';
-				if ( $a['criterion'] ) {
-					echo '<div class="sd-criterion"><strong>Κριτήριο επιτυχίας:</strong> ' . esc_html( $a['criterion'] ) . '</div>';
-				}
-				echo '</li>';
-			}
-			echo '</ol></div>';
-		}
 		if ( $res['goals'] ) {
 			SD_Frontend::form_open( 'plan_import_apply' );
 			echo '<input type="hidden" name="plan_id" value="' . (int) $plan->id . '">';

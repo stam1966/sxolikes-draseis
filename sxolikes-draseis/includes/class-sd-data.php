@@ -101,6 +101,18 @@ class SD_Data {
 				PRIMARY KEY  (id),
 				KEY year_id (year_id)
 			) $c;",
+			'CREATE TABLE ' . self::table( 'plan_evals' ) . " (
+				plan_id bigint(20) unsigned NOT NULL,
+				degree tinyint(3) unsigned NOT NULL DEFAULT 0,
+				achieved text NOT NULL,
+				difficulties text NOT NULL,
+				next_steps text NOT NULL,
+				sections longtext NOT NULL,
+				raw longtext NOT NULL,
+				updated_by bigint(20) unsigned NOT NULL DEFAULT 0,
+				updated_at datetime NOT NULL,
+				PRIMARY KEY  (plan_id)
+			) $c;",
 			'CREATE TABLE ' . self::table( 'plan_members' ) . " (
 				plan_id bigint(20) unsigned NOT NULL,
 				user_id bigint(20) unsigned NOT NULL,

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Σχολικές Δράσεις
  * Description:       Σχεδιασμός Εργαστηρίων Δεξιοτήτων και Δράσεων Ενεργού Πολίτη, συνδεδεμένων με τα Σχέδια Δράσης της εσωτερικής αξιολόγησης.
- * Version:           0.21.0
+ * Version:           0.22.0
  * Update URI:        https://github.com/stam1966/sxolikes-draseis
  * Requires at least: 6.2
  * Requires PHP:      7.4
@@ -15,8 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SD_VERSION', '0.21.0' );
-define( 'SD_DB_VERSION', '8' );
+define( 'SD_VERSION', '0.22.0' );
+define( 'SD_DB_VERSION', '9' );
 define( 'SD_FILE', __FILE__ );
 define( 'SD_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SD_URL', plugin_dir_url( __FILE__ ) );
@@ -44,6 +44,8 @@ require_once SD_DIR . 'includes/class-sd-ergplan.php';
 require_once SD_DIR . 'includes/class-sd-timeline.php';
 require_once SD_DIR . 'includes/class-sd-aifield.php';
 require_once SD_DIR . 'includes/class-sd-planimport.php';
+require_once SD_DIR . 'includes/class-sd-archparse.php';
+require_once SD_DIR . 'includes/class-sd-archive.php';
 require_once SD_DIR . 'includes/class-sd-guide.php';
 require_once SD_DIR . 'includes/class-sd-notify.php';
 require_once SD_DIR . 'includes/class-sd-updater.php';

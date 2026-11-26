@@ -498,9 +498,11 @@ body.sd-body {
 .sd-avatar { width: 38px; height: 38px; border-radius: 50%; background: #fbf0d6; color: #17302f; display: grid; place-items: center; font-weight: 700; font-size: .9rem; flex: none; }
 .sd-help-btn { border: 1px solid #d6e2e0; border-radius: 999px; padding: .35rem .9rem; color: #17302f; text-decoration: none; font-weight: 600; font-size: .9rem; }
 .sd-help-btn:hover, .sd-help-btn[aria-current] { border-color: #2f6f73; color: #1d4f52; background: #e4f0ef; }
-.sd-logout { color: #4f6664; font-size: .85rem; }
+.sd-logout { color: #4f6664; font-size: .85rem; display: inline-flex; align-items: center; gap: .3rem; text-decoration: none; padding: .35rem; border-radius: 8px; }
+.sd-logout:hover { color: #17302f; background: #e4f0ef; }
+.sd-logout .sd-ico { width: 18px; height: 18px; }
 @media (max-width: 760px) {
-	.sd-user-txt, .sd-logout { display: none; }
+	.sd-user-txt, .sd-logout-txt { display: none; }
 	.sd-school { max-width: 52vw; }
 }
 
@@ -939,3 +941,17 @@ details.sd-inline-edit > summary { font-size: .88rem; }
 .sd-app a.sd-pt-go.is-off { background: #c9d3d0; pointer-events: none; }
 .sd-pt-links { display: flex; flex-direction: column; gap: .5rem; }
 .sd-app a.sd-pt-link { color: var(--sd-accent-dark); font-weight: 600; font-size: .9rem; }
+
+/* ===== 0.22: Αρχείο προηγούμενων ετών ===== */
+.sd-arx-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; }
+.sd-arx-banner { background: #fbf0d6; border: 1px solid #ecd9a8; border-radius: 12px; padding: .8rem 1rem; margin: 0 0 1rem; }
+.sd-arx-year { margin-top: 1.2rem; }
+.sd-arx-plan { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1rem; padding: .6rem 0; border-top: 1px solid #e3ecea; }
+.sd-arx-plan:first-of-type { border-top: 0; }
+.sd-arx-plan .sd-grow { flex: 1 1 260px; min-width: 0; }
+.sd-arx-plan form { margin: 0; }
+.sd-arx-deg { display: inline-block; border-radius: 999px; padding: .1rem .6rem; font-size: .8rem; font-weight: 600; background: #e4f0ef; color: #1d4f52; }
+.sd-arx-deg.is-d2 { background: #fbf0d6; color: #6b4e00; }
+.sd-arx-deg.is-d1 { background: #f8e1df; color: #8a2b22; }
+.sd-arx-prev { border-top: 1px solid #e3ecea; margin-top: 1rem; padding-top: .5rem; }
+.sd-arx-ai { white-space: pre-wrap; background: #f6faf9; border: 1px solid #d6e2e0; border-radius: 12px; padding: 1rem; line-height: 1.55; }

@@ -529,6 +529,19 @@ class SD_AiField {
 		return trim( (string) $text );
 	}
 
+	/** Ελεύθερη ερώτηση (π.χ. προτάσεις από το Αρχείο), με τα ίδια όρια χρήσης. */
+	public static function ask( $prompt, $limit ) {
+		if ( ! self::api_on() ) {
+			return new WP_Error( 'sd', 'Δεν έχει ρυθμιστεί υπηρεσία AI.' );
+		}
+		$over = self::over_limit();
+		if ( $over ) {
+			return new WP_Error( 'sd', $over );
+		}
+		self::count_use();
+		return self::call( $prompt, $limit );
+	}
+
 	/* =================== AJAX =================== */
 
 	public static function ajax() {

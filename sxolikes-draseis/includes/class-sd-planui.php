@@ -227,6 +227,10 @@ class SD_PlanUI {
 			echo '<p class="sd-notice sd-error">Το σχέδιο δεν βρέθηκε.</p>';
 			return;
 		}
+		if ( SD_Archive::is_archive( $plan ) ) {
+			SD_Archive::render_plan( $plan );
+			return;
+		}
 		$edit = SD_Plans::can_edit( $plan );
 		$tab  = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
 		$tab  = in_array( $tab, array( 'forma', 'episkopisi' ), true ) ? $tab : ( $edit ? 'forma' : 'episkopisi' );
@@ -428,7 +432,7 @@ class SD_PlanUI {
 
 	/* =================== Επισκόπηση =================== */
 
-	private static function overview( $plan ) {
+	public static function overview( $plan ) {
 		$goals = SD_Plans::goals( $plan->id );
 		echo '<p class="sd-pt-state">Κατάσταση σχεδίου: ';
 		$errors = array_filter( SD_Plans::issues( $plan ), function ( $i ) {

@@ -76,7 +76,13 @@ class SD_Plans {
 		if ( ! $plan ) {
 			return false;
 		}
-		return current_user_can( SD_Roles::CAP_MANAGE ) || ( (int) $plan->coordinator_id && (int) $plan->coordinator_id === get_current_user_id() );
+		if ( current_user_can( SD_Roles::CAP_MANAGE ) ) {
+			return true;
+		}
+		if ( SD_Archive::is_archive( $plan ) ) {
+			return false; // Τα σχέδια προηγούμενων ετών αλλάζουν μόνο από τη διεύθυνση.
+		}
+		return (int) $plan->coordinator_id && (int) $plan->coordinator_id === get_current_user_id();
 	}
 
 	private static function touch( $plan_id ) {
@@ -516,7 +522,9 @@ class SD_Plans {
 	}
 
 	public static function render() {
-		if ( isset( $_GET['eisagogi'] ) ) {
+		if ( isset( $_GET['arxeio'] ) ) {
+			SD_Archive::render();
+		} elseif ( isset( $_GET['eisagogi'] ) ) {
 			SD_PlanImport::render( absint( $_GET['eisagogi'] ) );
 		} elseif ( isset( $_GET['copy'] ) ) {
 			self::render_copy( absint( $_GET['copy'] ) );
@@ -534,7 +542,7 @@ class SD_Plans {
 			return;
 		}
 		$plans = self::plans( $year->id );
-		echo '<h2>Σχέδια Δράσης ' . esc_html( $year->label ) . '</h2>';
+		echo '<div class="sd-arx-top"><h2>Σχέδια Δράσης ' . esc_html( $year->label ) . '</h2><a class="sd-button sd-small sd-quiet" href="' . esc_url( SD_Archive::url() ) . '">Αρχείο προηγούμενων ετών</a></div>';
 		echo '<p class="sd-help">Τα Σχέδια Δράσης της εσωτερικής αξιολόγησης είναι η «ομπρέλα» για τα Εργαστήρια και τις Δράσεις Ενεργού Πολίτη. Τα πεδία ακολουθούν την επίσημη φόρμα της πλατφόρμας του ΙΕΠ.</p>';
 
 		if ( ! $plans && current_user_can( SD_Roles::CAP_MANAGE ) && SD_Seed::available_for( $year ) ) {
@@ -566,6 +574,8 @@ class SD_Plans {
 			echo $errors ? '<p class="sd-badge sd-badge-warn">Ελλείψεις για την πλατφόρμα: ' . (int) $errors . '</p>' : '<p class="sd-badge sd-badge-ok">Πλήρες για την πλατφόρμα</p>';
 			echo '</section>';
 		}
+
+		SD_Archive::continue_card( $year );
 
 		if ( current_user_can( SD_Roles::CAP_MANAGE ) ) {
 			$free = self::users_without_team( $year->id );
