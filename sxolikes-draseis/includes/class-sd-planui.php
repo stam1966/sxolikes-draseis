@@ -135,6 +135,7 @@ class SD_PlanUI {
 		$own    = $goal ? wp_list_pluck( SD_Plans::actions( $goal->id ), 'id' ) : array();
 		$own    = array_map( 'intval', $own );
 		$keep   = 0;
+		$count  = array();
 		foreach ( (array) ( $post['act'] ?? array() ) as $i => $a ) {
 			if ( ! is_array( $a ) ) {
 				continue;
@@ -150,14 +151,17 @@ class SD_PlanUI {
 			if ( ! $id && '' === trim( $text ) ) {
 				continue; // κενή θέση
 			}
+			if ( $id && '' === trim( $text ) ) {
+				$del = true; // άδειασε η θέση: φεύγει η ενέργεια
+			}
 			$from = isset( $months[ $a['from'] ?? '' ] ) ? $a['from'] : '';
 			$to   = isset( $months[ $a['to'] ?? '' ] ) ? $a['to'] : '';
 			if ( $from && $to && $to < $from ) {
 				return array( new WP_Error( 'sd', 'Ο Μήνας Λήξης είναι πριν από τον Μήνα Έναρξης.' ), $back );
 			}
 			$kind   = isset( SD_Eval::ACTION_KINDS[ $a['kind'] ?? '' ] ) ? $a['kind'] : 'ylopoiisi';
-			$grades = isset( $a['grades'] ) && is_array( $a['grades'] ) ? array_values( array_intersect( array_keys( SD_Data::GRADES ), array_map( 'absint', $a['grades'] ) ) ) : array();
 			$keep  += $del ? 0 : 1;
+			$count[ $kind ] = ( $count[ $kind ] ?? 0 ) + ( $del ? 0 : 1 );
 			$rows[] = array(
 				'id'   => $id,
 				'del'  => $del,
@@ -167,12 +171,12 @@ class SD_PlanUI {
 					'start_date'  => $from ? $from . '-01' : null,
 					'end_date'    => $to ? gmdate( 'Y-m-t', strtotime( $to . '-01' ) ) : null,
 					'criterion'   => 'apotimisi' === $kind ? $crit : '',
-					'grades'      => implode( ',', $grades ),
+					'grades'      => '',
 				),
 			);
 		}
-		if ( $keep > self::MAX_ACTIONS ) {
-			return array( new WP_Error( 'sd', 'Κάθε στόχος έχει έως ' . self::MAX_ACTIONS . ' ενέργειες.' ), $back );
+		if ( ( $count['ylopoiisi'] ?? 0 ) > 2 || ( $count['apotimisi'] ?? 0 ) > 1 ) {
+			return array( new WP_Error( 'sd', 'Κάθε στόχος έχει 2 ενέργειες υλοποίησης και 1 ενέργεια αποτίμησης.' ), $back );
 		}
 
 		$gdata = array(
@@ -290,31 +294,24 @@ class SD_PlanUI {
 		return $h . '</div>';
 	}
 
-	private static function action_card( $i, $a, $label, $months, $dis, $hidden = false, $kind = 'ylopoiisi' ) {
-		$k    = $a ? $a->kind : $kind;
-		$sel  = $a && '' !== $a->grades ? explode( ',', $a->grades ) : array();
+	private static function action_card( $i, $a, $label, $months, $dis, $kind = 'ylopoiisi', $extra = false ) {
+		$k    = $a && $extra ? $a->kind : $kind;
 		$base = 'act[' . (int) $i . ']';
-		$h    = '<div class="sd-pt-act sd-pt-act-' . esc_attr( $k ) . '" data-act' . ( $hidden ? ' hidden data-empty' : '' ) . '>';
-		$h   .= '<div class="sd-pt-act-top"><span class="sd-pt-kind" data-kind-label>' . esc_html( $label ) . '</span>';
-		$h   .= '<label class="sd-pt-kind-pick">Είδος <select name="' . esc_attr( $base ) . '[kind]" data-kind' . $dis . '>';
-		foreach ( SD_Eval::ACTION_KINDS as $kk => $kl ) {
-			$h .= '<option value="' . esc_attr( $kk ) . '"' . selected( $k, $kk, false ) . '>' . esc_html( $kl ) . '</option>';
-		}
-		$h .= '</select></label>';
-		if ( ! $dis ) {
-			$h .= '<label class="sd-pt-del" title="Διαγραφή ενέργειας"><input type="checkbox" name="' . esc_attr( $base ) . '[del]" value="1" data-del><span>' . SD_Docs::icon( 'trash' ) . 'Διαγραφή</span></label>';
+		$h    = '<div class="sd-pt-act sd-pt-act-' . esc_attr( $k ) . ( $extra ? ' is-extra' : '' ) . '" data-act>';
+		$h   .= '<div class="sd-pt-act-top"><span class="sd-pt-kind">' . esc_html( $label ) . '</span>';
+		$h   .= '<input type="hidden" name="' . esc_attr( $base ) . '[kind]" value="' . esc_attr( $k ) . '">';
+		if ( $extra && ! $dis ) {
+			$h .= '<span class="sd-meta">Περισσεύει: κάθε στόχος έχει 2 υλοποίησης και 1 αποτίμησης.</span><label class="sd-pt-del"><input type="checkbox" name="' . esc_attr( $base ) . '[del]" value="1" data-del checked><span>' . SD_Docs::icon( 'trash' ) . 'Θα διαγραφεί</span></label>';
 		}
 		$h .= '</div>';
 		$h .= '<input type="hidden" name="' . esc_attr( $base ) . '[id]" value="' . (int) ( $a ? $a->id : 0 ) . '">';
-		$h .= '<label class="sd-pt-field" data-help="Τι ακριβώς θα γίνει, από ποιους/ποιες και πού. Μία ενέργεια = μία συγκεκριμένη δράση.">Περιγραφή Ενέργειας <small>(έως ' . SD_Eval::LIMIT . ' χαρ.)</small><textarea name="' . esc_attr( $base ) . '[desc]" rows="3" data-limit="' . SD_Eval::LIMIT . '"' . $dis . '>' . esc_textarea( $a ? $a->description : '' ) . '</textarea></label>';
+		$h .= '<label class="sd-pt-field" data-help="Τι ακριβώς θα γίνει, από ποιους/ποιες και πού. Μία ενέργεια = μία συγκεκριμένη δράση. Αν αδειάσετε το πεδίο και αποθηκεύσετε, η ενέργεια διαγράφεται.">Περιγραφή Ενέργειας <small>(έως ' . SD_Eval::LIMIT . ' χαρ.)</small><textarea name="' . esc_attr( $base ) . '[desc]" rows="3" data-limit="' . SD_Eval::LIMIT . '"' . $dis . '>' . esc_textarea( $a ? $a->description : '' ) . '</textarea></label>';
 		$h .= '<div class="sd-pt-months"><label data-help="Ο μήνας που ξεκινά η ενέργεια.">Μήνας Έναρξης ' . self::month_select( $base . '[from]', $a ? self::ym( $a->start_date ) : '', $months, $dis ) . '</label>';
 		$h .= '<label data-help="Ο μήνας που ολοκληρώνεται η ενέργεια.">Μήνας Λήξης ' . self::month_select( $base . '[to]', $a ? self::ym( $a->end_date ) : '', $months, $dis ) . '</label></div>';
-		$h .= '<label class="sd-pt-field sd-pt-crit" data-help="Από ποια στοιχεία, ενδείξεις ή αλλαγές θα διαπιστώσετε ότι ο στόχος επιτεύχθηκε; Τι θα παρατηρήσετε ή θα μετρήσετε;">Κριτήριο Επιτυχίας <small>Από ποια στοιχεία θα διαπιστώσετε ότι ο στόχος επιτεύχθηκε; (έως ' . SD_Eval::LIMIT . ' χαρ.)</small><textarea name="' . esc_attr( $base ) . '[crit]" rows="3" data-limit="' . SD_Eval::LIMIT . '"' . $dis . '>' . esc_textarea( $a ? $a->criterion : '' ) . '</textarea></label>';
-		$h .= '<details class="sd-pt-grades"><summary>Ποιες τάξεις αφορά <small>(για την εφαρμογή· κενό = όλες)</small></summary><div class="sd-chips">';
-		foreach ( SD_Data::GRADES as $n => $l ) {
-			$h .= '<label class="sd-chip"><input type="checkbox" name="' . esc_attr( $base ) . '[grades][]" value="' . (int) $n . '"' . ( in_array( (string) $n, $sel, true ) ? ' checked' : '' ) . $dis . '><span>' . esc_html( $l ) . '</span></label>';
+		if ( 'apotimisi' === $k ) {
+			$h .= '<label class="sd-pt-field sd-pt-crit" data-help="Από ποια στοιχεία, ενδείξεις ή αλλαγές θα διαπιστώσετε ότι ο στόχος επιτεύχθηκε; Τι θα παρατηρήσετε ή θα μετρήσετε;">Κριτήριο Επιτυχίας <small>Από ποια στοιχεία θα διαπιστώσετε ότι ο στόχος επιτεύχθηκε; (έως ' . SD_Eval::LIMIT . ' χαρ.)</small><textarea name="' . esc_attr( $base ) . '[crit]" rows="3" data-limit="' . SD_Eval::LIMIT . '"' . $dis . '>' . esc_textarea( $a ? $a->criterion : '' ) . '</textarea></label>';
 		}
-		return $h . '</div></details></div>';
+		return $h . '</div>';
 	}
 
 	private static function form( $plan, $edit ) {
@@ -382,31 +379,29 @@ class SD_PlanUI {
 
 		// Ενέργειες
 		echo '<div class="sd-pt-ipanel" data-ipanel="energeies">';
-		echo '<div class="sd-pt-acts-top">' . ( $edit ? '<button type="button" class="sd-button sd-small" data-add-act>+ Προσθήκη Ενέργειας</button>' : '<span></span>' ) . '<span class="sd-meta"><span data-act-count>' . count( $actions ) . '</span>/' . self::MAX_ACTIONS . ' ενέργειες</span></div>';
-		$i = 0;
-		foreach ( $actions as $idx => $a ) {
-			echo self::action_card( $i++, $a, $labels[ $idx ], $months, $dis ); // phpcs:ignore WordPress.Security.EscapeOutput
-		}
-		if ( ! $actions && ! $edit ) {
-			echo '<p class="sd-meta">— Καμία ενέργεια —</p>';
-		}
-		if ( $edit ) {
-			$has_eval = false;
-			$ylop     = 0;
-			foreach ( $actions as $a ) {
-				$has_eval = $has_eval || 'apotimisi' === $a->kind;
-				$ylop    += 'ylopoiisi' === $a->kind ? 1 : 0;
-			}
-			for ( $s = count( $actions ); $s < self::MAX_ACTIONS; $s++ ) {
-				// Προτεινόμενο είδος: πρώτα υλοποίηση, η τελευταία θέση αποτίμηση.
-				$kind = ( ! $has_eval && ( $ylop >= 1 || self::MAX_ACTIONS - 1 === $s ) ) ? 'apotimisi' : 'ylopoiisi';
-				if ( 'apotimisi' === $kind ) {
-					$has_eval = true;
+		echo '<p class="sd-help sd-pt-rule">Κάθε στόχος έχει <strong>2 ενέργειες υλοποίησης</strong> και <strong>1 ενέργεια αποτίμησης</strong>.</p>';
+		$ylop  = array();
+		$apot  = array();
+		$extra = array();
+		foreach ( $actions as $a ) {
+			if ( 'apotimisi' === $a->kind ) {
+				if ( ! $apot ) {
+					$apot[] = $a;
 				} else {
-					$ylop++;
+					$extra[] = $a;
 				}
-				echo self::action_card( $i++, null, 'apotimisi' === $kind ? 'Ενέργεια Αποτίμησης' : 'Ενέργεια Υλοποίησης ' . $ylop, $months, $dis, true, $kind ); // phpcs:ignore WordPress.Security.EscapeOutput
+			} elseif ( count( $ylop ) < 2 ) {
+				$ylop[] = $a;
+			} else {
+				$extra[] = $a;
 			}
+		}
+		$i = 0;
+		echo self::action_card( $i++, $ylop[0] ?? null, 'Ενέργεια Υλοποίησης 1', $months, $dis, 'ylopoiisi' ); // phpcs:ignore WordPress.Security.EscapeOutput
+		echo self::action_card( $i++, $ylop[1] ?? null, 'Ενέργεια Υλοποίησης 2', $months, $dis, 'ylopoiisi' ); // phpcs:ignore WordPress.Security.EscapeOutput
+		echo self::action_card( $i++, $apot[0] ?? null, 'Ενέργεια Αποτίμησης', $months, $dis, 'apotimisi' ); // phpcs:ignore WordPress.Security.EscapeOutput
+		foreach ( $extra as $a ) {
+			echo self::action_card( $i++, $a, 'apotimisi' === $a->kind ? 'Ενέργεια Αποτίμησης (επιπλέον)' : 'Ενέργεια Υλοποίησης (επιπλέον)', $months, $dis, $a->kind, true ); // phpcs:ignore WordPress.Security.EscapeOutput
 		}
 		echo '</div>';
 
@@ -562,7 +557,7 @@ class SD_PlanUI {
 			echo '<p class="sd-help">Ανοίγουν τα κείμενα έτοιμα για αντιγραφή, πεδίο προς πεδίο, με τη σειρά της πλατφόρμας.' . ( $errors ? ' Πρώτα συμπληρώστε όσα λείπουν.' : '' ) . '</p>';
 			return;
 		}
-		echo '<div class="sd-pt-card sd-pt-guide"><p>Σχεδιάστε τους <strong>στόχους</strong>, τις <strong>ενέργειες</strong>, τα <strong>εργαλεία</strong> και τον <strong>τρόπο εργασίας</strong> του Σχεδίου Δράσης. Για κάθε στόχο σκεφτείτε:</p><ul><li>τι θέλετε να αλλάξει,</li><li>τι θα κάνετε για να το πετύχετε,</li><li>πώς και με ποια εργαλεία θα εργαστείτε,</li><li>πώς θα διαπιστώσετε αν πετύχατε τον στόχο,</li><li>πότε θα γίνει κάθε ενέργεια.</li></ul><p>Έως <strong>' . (int) SD_Eval::MAX_GOALS . ' στόχους</strong> και έως <strong>' . self::MAX_ACTIONS . ' ενέργειες ανά στόχο</strong>, με τουλάχιστον μία ενέργεια υλοποίησης και μία αποτίμησης. Δεν χρειάζεται να εξαντλήσετε το όριο.</p></div>';
+		echo '<div class="sd-pt-card sd-pt-guide"><p>Σχεδιάστε τους <strong>στόχους</strong>, τις <strong>ενέργειες</strong>, τα <strong>εργαλεία</strong> και τον <strong>τρόπο εργασίας</strong> του Σχεδίου Δράσης. Για κάθε στόχο σκεφτείτε:</p><ul><li>τι θέλετε να αλλάξει,</li><li>τι θα κάνετε για να το πετύχετε,</li><li>πώς και με ποια εργαλεία θα εργαστείτε,</li><li>πώς θα διαπιστώσετε αν πετύχατε τον στόχο,</li><li>πότε θα γίνει κάθε ενέργεια.</li></ul><p>Έως <strong>' . (int) SD_Eval::MAX_GOALS . ' στόχους</strong>. Κάθε στόχος έχει <strong>2 ενέργειες υλοποίησης και 1 ενέργεια αποτίμησης</strong> με κριτήριο επιτυχίας.</p></div>';
 		echo '<div class="sd-pt-card sd-pt-help"><h4>Βοήθεια πεδίου</h4><p data-field-help><em>Πατήστε σε ένα πεδίο για να δείτε τη σχετική βοήθεια.</em></p></div>';
 		echo '<div class="sd-pt-links">';
 		echo '<a class="sd-pt-go" href="' . esc_url( SD_Frontend::url( 'sxedia', array( 'copy' => $plan->id ) ) ) . '">Κείμενα για την πλατφόρμα</a>';

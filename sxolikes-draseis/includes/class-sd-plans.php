@@ -65,9 +65,6 @@ class SD_Plans {
 		foreach ( self::plans( $year_id ) as $p ) {
 			foreach ( self::goals( $p->id ) as $g ) {
 				foreach ( self::actions( $g->id ) as $a ) {
-					if ( $grade && '' !== $a->grades && ! in_array( (string) $grade, explode( ',', $a->grades ), true ) ) {
-						continue;
-					}
 					$out[] = array( $p, $g, $a );
 				}
 			}
@@ -209,8 +206,8 @@ class SD_Plans {
 					$out[] = array( 'error', $n . ': το κριτήριο επιτυχίας ξεπερνά τους ' . SD_Eval::LIMIT . ' χαρακτήρες.' );
 				}
 			}
-			if ( $counts['ylopoiisi'] < 1 || $counts['ylopoiisi'] > 2 ) {
-				$out[] = array( 'error', $n . ': χρειάζονται 1 ή 2 ενέργειες υλοποίησης (τώρα ' . $counts['ylopoiisi'] . ').' );
+			if ( 2 !== $counts['ylopoiisi'] ) {
+				$out[] = array( 'error', $n . ': χρειάζονται 2 ενέργειες υλοποίησης (τώρα ' . $counts['ylopoiisi'] . ').' );
 			}
 			if ( 1 !== $counts['apotimisi'] ) {
 				$out[] = array( 'error', $n . ': χρειάζεται ακριβώς 1 ενέργεια αποτίμησης (τώρα ' . $counts['apotimisi'] . ').' );
