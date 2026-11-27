@@ -419,23 +419,29 @@ class SD_Workshops {
 		if ( current_user_can( SD_Roles::CAP_REVIEW ) ) {
 			echo '<p><a class="sd-button sd-small" href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxolio' => 1 ) ) ) . '">Σχέδιο Δράσης Σχολικής Μονάδας</a> <span class="sd-meta">Προγραμματισμός όλων των τμημάτων: ' . SD_Exports::links( 'progall', 0 ) . '</span></p>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		}
+		$single = 1 === count( $classes );
+		echo '<div class="sd-fold-group" data-fold-group data-fold-label="Τμήματα">';
 		foreach ( $classes as $c ) {
-			$form  = self::form_of_class( $c->id );
-			$weeks = 0;
-			$links = 0;
+			$form   = self::form_of_class( $c->id );
+			$weeks  = 0;
+			$links  = 0;
+			$rows   = SD_ErgPlan::programming_rows( $c );
+			$titled = count( array_filter( $rows, function ( $r ) { return '' !== $r['title']; } ) );
 			foreach ( self::units( $form ) as $u ) {
 				$weeks += (int) $u->weeks;
 				$links += $u->action_id ? 1 : 0;
 			}
-			echo '<section class="sd-card sd-prog"><h3>Τμήμα ' . esc_html( SD_Data::class_label( $c ) ) . ' ' . self::status_badge( $form ) . '</h3>'; // phpcs:ignore WordPress.Security.EscapeOutput
-			echo '<div class="sd-table-wrap"><table class="sd-table"><thead><tr><th>Εκπαιδευτικός</th><th>Θεματική ενότητα</th><th>Υποθεματική</th><th>Τίτλος</th><th>Περίοδος</th></tr></thead><tbody>';
-			foreach ( SD_ErgPlan::programming_rows( $c ) as $r ) {
-				echo '<tr><td>' . esc_html( $r['teacher'] ? $r['teacher'] : '—' ) . '</td><td>' . esc_html( $r['cycle'] ) . '</td><td>' . esc_html( $r['subtheme'] ) . '</td><td>' . ( '' !== $r['title'] ? '«' . esc_html( $r['title'] ) . '»' : '<span class="sd-meta">χωρίς τίτλο ακόμη</span>' ) . '</td><td>' . esc_html( $r['period'] ? $r['period'] : '—' ) . '</td></tr>';
+			$meta = '<span>' . (int) $weeks . ' εβδομάδες</span><span>' . (int) $titled . '/' . count( $rows ) . ' τίτλοι</span><span>' . (int) $links . '/4 με Σχέδιο Δράσης</span>';
+			echo SD_Docs::fold_open( 'Τμήμα ' . esc_html( SD_Data::class_label( $c ) ) . ' ' . self::status_badge( $form ), $meta, $single, 'id="tmima-' . (int) $c->id . '"' ); // phpcs:ignore WordPress.Security.EscapeOutput
+			echo '<div class="sd-table-wrap"><table class="sd-table sd-table-stack"><thead><tr><th>Εκπαιδευτικός</th><th>Θεματική ενότητα</th><th>Υποθεματική</th><th>Τίτλος</th><th>Περίοδος</th></tr></thead><tbody>';
+			foreach ( $rows as $r ) {
+				echo '<tr><td data-th="Εκπαιδευτικός">' . esc_html( $r['teacher'] ? $r['teacher'] : '—' ) . '</td><td data-th="Θεματική">' . esc_html( $r['cycle'] ) . '</td><td data-th="Υποθεματική">' . esc_html( $r['subtheme'] ) . '</td><td data-th="Τίτλος">' . ( '' !== $r['title'] ? '«' . esc_html( $r['title'] ) . '»' : '<span class="sd-meta">χωρίς τίτλο ακόμη</span>' ) . '</td><td data-th="Περίοδος">' . esc_html( $r['period'] ? $r['period'] : '—' ) . '</td></tr>';
 			}
 			echo '</tbody></table></div>';
-			echo '<p class="sd-meta">Εβδομάδες: ' . (int) $weeks . ' · Σύνδεση με Σχέδια Δράσης: ' . (int) $links . ' / 4</p>';
-			echo '<p><a class="sd-button sd-small" href="' . esc_url( SD_Wizard::url( $c->id ) ) . '">Συμπληρώστε βήμα-βήμα</a> <a class="sd-button sd-small sd-quiet" href="' . esc_url( self::url_form( $c ) ) . '">Έντυπο 1Α</a> <a class="sd-button sd-small sd-quiet" href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxedio' => $c->id ) ) ) . '">Σχέδιο τμήματος</a> <span class="sd-meta">Προγραμματισμός: ' . SD_Exports::links( 'prog', $c->id ) . '</span></p></section>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			echo '<div class="sd-fold-actions"><a class="sd-button sd-small" href="' . esc_url( SD_Wizard::url( $c->id ) ) . '">Συμπληρώστε βήμα-βήμα</a> <a class="sd-button sd-small sd-quiet" href="' . esc_url( self::url_form( $c ) ) . '">Έντυπο 1Α</a> <a class="sd-button sd-small sd-quiet" href="' . esc_url( SD_Frontend::url( 'ergastiria', array( 'sxedio' => $c->id ) ) ) . '">Σχέδιο τμήματος</a> <span class="sd-meta">Προγραμματισμός: ' . SD_Exports::links( 'prog', $c->id ) . '</span></div>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			echo SD_Docs::fold_close(); // phpcs:ignore WordPress.Security.EscapeOutput
 		}
+		echo '</div>';
 	}
 
 	private static function url_form( $class ) {

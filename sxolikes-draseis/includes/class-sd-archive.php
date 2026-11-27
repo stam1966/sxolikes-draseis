@@ -574,19 +574,34 @@ class SD_Archive {
 		echo '<h2>Αρχείο προηγούμενων ετών</h2>';
 		echo '<p class="sd-help">Τα Σχέδια Δράσης των προηγούμενων ετών, η αποτίμησή τους και οι Ετήσιες Εκθέσεις. Βοηθούν στον σχεδιασμό της νέας χρονιάς: συνέχεια ενός σχεδίου, τεκμηρίωση της αρχικής ανάγκης, ιδέες.</p>';
 
-		if ( $manage ) {
-			self::import_card();
-		}
-
-		$any = false;
+		$years = array();
 		foreach ( self::past_years() as $y ) {
 			$plans = SD_Plans::plans( $y->id );
 			$rep   = self::get_report( $y->id );
-			if ( ! $plans && ! $rep ) {
-				continue;
+			if ( $plans || $rep ) {
+				$years[] = array( $y, $plans, $rep );
 			}
-			$any = true;
-			echo '<section class="sd-card sd-arx-year"><h3>' . esc_html( $y->label ) . '</h3>';
+		}
+		$any = (bool) $years;
+
+		if ( $manage ) {
+			self::import_card( ! $any );
+		}
+
+		if ( $any ) {
+			echo '<div class="sd-fold-group" data-fold-group data-fold-label="Σχολικά έτη">';
+		}
+		$first = true;
+		foreach ( $years as $row ) {
+			list( $y, $plans, $rep ) = $row;
+			$evald = 0;
+			foreach ( $plans as $p ) {
+				$ev     = self::get_eval( $p->id );
+				$evald += ( $ev && ! empty( $ev['degree'] ) ) ? 1 : 0;
+			}
+			$meta = '<span>' . count( $plans ) . ' ' . ( 1 === count( $plans ) ? 'σχέδιο' : 'σχέδια' ) . '</span>' . ( $plans ? '<span>' . (int) $evald . ' με βαθμό επίτευξης</span>' : '' ) . '<span>' . ( $rep ? 'Ετήσια Έκθεση' : 'χωρίς Έκθεση' ) . '</span>';
+			echo SD_Docs::fold_open( esc_html( $y->label ), $meta, $first, 'id="etos-' . (int) $y->id . '"' ); // phpcs:ignore WordPress.Security.EscapeOutput
+			$first = false;
 			if ( $rep ) {
 				echo '<div class="sd-arx-plan"><div class="sd-grow"><strong><a href="' . esc_url( self::url( array( 'ekthesi' => $y->id ) ) ) . '">Ετήσια Έκθεση Εσωτερικής Αξιολόγησης</a></strong>';
 				echo '<div class="sd-meta">' . ( $rep['degree'] ? 'Επίτευξη στόχων: ' . esc_html( SD_ArchParse::DEGREES[ $rep['degree'] ] ?? '' ) . ' · ' : '' ) . 'Άξονες με βαθμολογία: ' . count( $rep['axes'] ) . '</div></div>';
@@ -599,7 +614,10 @@ class SD_Archive {
 			foreach ( $plans as $p ) {
 				self::plan_row( $p, $manage );
 			}
-			echo '</section>';
+			echo SD_Docs::fold_close(); // phpcs:ignore WordPress.Security.EscapeOutput
+		}
+		if ( $any ) {
+			echo '</div>';
 		}
 		if ( ! $any ) {
 			echo '<p class="sd-notice">Το αρχείο είναι ακόμη άδειο.' . ( $manage ? ' Εισαγάγετε τα σχέδια και τις εκθέσεις των προηγούμενων ετών από την πλατφόρμα με τη φόρμα παραπάνω.' : '' ) . '</p>';
@@ -636,10 +654,10 @@ class SD_Archive {
 		echo '</div>';
 	}
 
-	private static function import_card() {
+	private static function import_card( $open = true ) {
 		$max = self::max_start();
 		$t   = get_transient( self::tkey() );
-		echo '<section class="sd-card"><h3>Εισαγωγή από την πλατφόρμα</h3>';
+		echo SD_Docs::fold_open( 'Εισαγωγή από την πλατφόρμα', '<span>Φόρμα Αποτύπωσης, Ετήσια Έκθεση ή Σχέδιο</span>', $open || is_array( $t ), 'id="eisagogi"' ); // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<p>Ανοίξτε στην πλατφόρμα του ΙΕΠ το έγγραφο που θέλετε (καλύτερα το <strong>PDF</strong> της εξαγωγής), πατήστε <kbd>Ctrl</kbd>+<kbd>A</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> και επικολλήστε εδώ. Η εφαρμογή αναγνωρίζει μόνη της τι είναι:</p><ul class="sd-steps">';
 		echo '<li><strong>Φόρμα Αποτύπωσης Σχεδίου Δράσης</strong> (παλιά πλατφόρμα): ένα σχέδιο με σχεδιασμό, υλοποίηση, <strong>αποτίμηση</strong> και ανατροφοδότηση του Συμβούλου. Αν το σχέδιο υπάρχει ήδη, συμπληρώνεται. <strong>Αρκούν οι Φόρμες όλων των σχεδίων και η Ετήσια Έκθεση.</strong></li>';
 		echo '<li><strong>Συλλογικός Προγραμματισμός</strong>: μόνο αν λείπουν Φόρμες, για τους τίτλους και τους στόχους. Το PDF του είναι πίνακας και η αντιγραφή συχνά ανακατεύει τις στήλες· ελέγξτε την προεπισκόπηση.</li>';
@@ -658,7 +676,7 @@ class SD_Archive {
 		if ( is_array( $t ) ) {
 			self::import_preview( $t );
 		}
-		echo '</section>';
+		echo SD_Docs::fold_close(); // phpcs:ignore WordPress.Security.EscapeOutput
 	}
 
 	private static function import_preview( $t ) {

@@ -11,6 +11,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class SD_Docs {
 
+	/**
+	 * Αρχή πτυσσόμενης κάρτας (ακορντεόν). Κλείνει με fold_close().
+	 * $title_html και $meta_html: HTML ήδη ασφαλές.
+	 */
+	public static function fold_open( $title_html, $meta_html = '', $open = false, $attrs = '' ) {
+		return '<details class="sd-card sd-fold"' . ( $open ? ' open' : '' ) . ( $attrs ? ' ' . $attrs : '' ) . '><summary class="sd-fold-head"><span class="sd-fold-title">' . $title_html . '</span>'
+			. ( '' !== $meta_html ? '<span class="sd-fold-meta">' . $meta_html . '</span>' : '' )
+			. '<span class="sd-fold-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></summary><div class="sd-fold-body">';
+	}
+
+	public static function fold_close() {
+		return '</div></details>';
+	}
+
 	const ICONS = array(
 		'eye'   => '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
 		'word'  => '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',

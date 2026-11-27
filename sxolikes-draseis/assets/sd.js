@@ -953,3 +953,56 @@
 		upd();
 	}
 }() );
+// Πτυσσόμενες κάρτες: «Άνοιγμα όλων» σε ομάδες με 3+ κάρτες, και άνοιγμα της κάρτας που δείχνει ο σύνδεσμος (#…).
+( function () {
+	'use strict';
+	document.querySelectorAll( '[data-fold-group]' ).forEach( function ( group ) {
+		var folds = group.querySelectorAll( ':scope > details.sd-fold' );
+		var name = group.getAttribute( 'data-fold-label' );
+		if ( folds.length < 3 && ! name ) {
+			return;
+		}
+		var bar = document.createElement( 'div' );
+		if ( name ) {
+			var h = document.createElement( 'span' );
+			h.className = 'sd-fold-label';
+			h.textContent = name + ' · ' + folds.length;
+			bar.appendChild( h );
+		}
+		var btn = document.createElement( 'button' );
+		bar.className = 'sd-fold-tools';
+		btn.type = 'button';
+		btn.className = 'sd-fold-all';
+		function allOpen() {
+			return Array.prototype.every.call( folds, function ( d ) { return d.open; } );
+		}
+		function label() {
+			btn.textContent = allOpen() ? 'Κλείσιμο όλων' : 'Άνοιγμα όλων';
+			btn.setAttribute( 'aria-expanded', allOpen() ? 'true' : 'false' );
+		}
+		btn.addEventListener( 'click', function () {
+			var open = ! allOpen();
+			folds.forEach( function ( d ) { d.open = open; } );
+			label();
+		} );
+		folds.forEach( function ( d ) { d.addEventListener( 'toggle', label ); } );
+		label();
+		if ( folds.length > 1 ) {
+			bar.appendChild( btn );
+		}
+		group.parentNode.insertBefore( bar, group );
+	} );
+	function openHash() {
+		if ( ! location.hash || location.hash.length < 2 ) {
+			return;
+		}
+		var el = document.getElementById( decodeURIComponent( location.hash.slice( 1 ) ) );
+		var d = el && el.closest ? el.closest( 'details.sd-fold' ) : null;
+		while ( d ) {
+			d.open = true;
+			d = d.parentElement ? d.parentElement.closest( 'details.sd-fold' ) : null;
+		}
+	}
+	openHash();
+	window.addEventListener( 'hashchange', openHash );
+}() );

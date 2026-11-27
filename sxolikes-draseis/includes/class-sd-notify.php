@@ -90,7 +90,7 @@ class SD_Notify {
 		$k = (int) $submitter . '-' . (int) $class_id;
 		if ( ! isset( $cache[ $k ] ) ) {
 			$cache[ $k ] = false;
-			foreach ( SD_Roles::app_users() as $u ) {
+			foreach ( SD_Roles::people() as $u ) {
 				if ( (int) $u->ID !== (int) $submitter && user_can( $u, SD_Roles::CAP_MANAGE ) && ! ( $class_id && SD_Workshops::is_class_teacher( $class_id, $u->ID ) ) ) {
 					$cache[ $k ] = true;
 					break;
@@ -122,7 +122,7 @@ class SD_Notify {
 	/** Χρήστες που μπορούν να ελέγξουν (για email). */
 	private static function reviewers( $submitter, $class_id, $manage_only = false ) {
 		$out = array();
-		foreach ( SD_Roles::app_users() as $u ) {
+		foreach ( SD_Roles::people() as $u ) {
 			if ( $manage_only ? ( user_can( $u, SD_Roles::CAP_MANAGE ) && (int) $u->ID !== (int) $submitter ) : self::may_review( $submitter, $class_id, $u->ID ) ) {
 				$out[ $u->ID ] = $u;
 			}
@@ -400,7 +400,7 @@ class SD_Notify {
 		update_option( self::OPT_LAST, $today, false );
 		$sent   = 0;
 		$monday = $force || '1' === current_time( 'N' );
-		foreach ( SD_Roles::app_users() as $u ) {
+		foreach ( SD_Roles::people() as $u ) {
 			// Δευτέρα: η Διεύθυνση παίρνει την εβδομαδιαία αναφορά (μαζί και τυχόν υπενθυμίσεις της), σε ένα email.
 			if ( $monday && $cfg['weekly'] && user_can( $u, SD_Roles::CAP_MANAGE ) ) {
 				$lines = self::weekly_report( $u->ID );
@@ -481,7 +481,13 @@ class SD_Notify {
 
 	public static function render_settings() {
 		$c = self::cfg();
-		echo '<section class="sd-card" id="eidopoiiseis"><h3>Ειδοποιήσεις με email</h3>';
+		$on = array();
+		foreach ( array( 'submit' => 'υποβολές', 'decision' => 'αποφάσεις', 'reminders' => 'υπενθυμίσεις', 'weekly' => 'εβδομαδιαία αναφορά' ) as $k => $l ) {
+			if ( ! empty( $c[ $k ] ) ) {
+				$on[] = '<span>' . esc_html( $l ) . '</span>';
+			}
+		}
+		echo SD_Docs::fold_open( 'Ειδοποιήσεις με email', $on ? implode( '', $on ) : '<span>όλες κλειστές</span>', false, 'id="eidopoiiseis"' ); // phpcs:ignore WordPress.Security.EscapeOutput
 		SD_Frontend::form_open( 'notify_save' );
 		$box = function ( $name, $label ) use ( $c ) {
 			echo '<label class="sd-block"><input type="checkbox" name="' . esc_attr( $name ) . '" value="1"' . checked( ! empty( $c[ $name ] ), true, false ) . '> ' . esc_html( $label ) . '</label>';
@@ -498,6 +504,6 @@ class SD_Notify {
 		echo '<button class="sd-button sd-small sd-quiet" type="submit">Στείλτε μου τώρα την εβδομαδιαία αναφορά</button></form> ';
 		SD_Frontend::form_open( 'notify_test' );
 		echo '<button class="sd-button sd-small sd-quiet" type="submit" onclick="return confirm(\'Να σταλούν τώρα όσες υπενθυμίσεις αντιστοιχούν στη σημερινή ημέρα;\');">Αποστολή των σημερινών υπενθυμίσεων τώρα</button></form>';
-		echo '</section>';
+		echo SD_Docs::fold_close(); // phpcs:ignore WordPress.Security.EscapeOutput
 	}
 }

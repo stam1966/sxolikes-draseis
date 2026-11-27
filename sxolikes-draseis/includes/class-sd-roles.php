@@ -79,4 +79,28 @@ class SD_Roles {
 			)
 		);
 	}
+
+	/** Έχει ο χρήστης ρόλο της εφαρμογής (όχι μόνο διαχειριστής του WordPress); */
+	public static function is_person( $user ) {
+		return (bool) array_intersect( array_keys( self::definitions() ), (array) $user->roles );
+	}
+
+	/**
+	 * Εκπαιδευτικοί για επιλογές (ομάδες, τμήματα) και email: χωρίς τον κοινό
+	 * λογαριασμό διαχειριστή του σχολείου, εκτός αν είναι ήδη επιλεγμένος ($keep).
+	 * Αν δεν υπάρχει κανείς με ρόλο της εφαρμογής, επιστρέφει όλους.
+	 */
+	public static function people( array $keep = array() ) {
+		$all  = self::app_users();
+		$keep = array_map( 'intval', $keep );
+		$out  = array_values(
+			array_filter(
+				$all,
+				function ( $u ) use ( $keep ) {
+					return self::is_person( $u ) || in_array( (int) $u->ID, $keep, true );
+				}
+			)
+		);
+		return $out ? $out : $all;
+	}
 }

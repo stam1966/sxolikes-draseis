@@ -650,7 +650,7 @@ class SD_Plans {
 			echo '<p class="sd-help">Σημείωση (όπως στην πλατφόρμα): ' . esc_html( $plan->team_note ) . '</p>';
 		}
 		if ( current_user_can( SD_Roles::CAP_MANAGE ) ) {
-			$users = SD_Roles::app_users();
+			$users = SD_Roles::people( array_merge( $members, array( (int) $plan->coordinator_id ) ) );
 			echo '<details open><summary>Ορισμός ομάδας</summary>';
 			SD_Frontend::form_open( 'save_team' );
 			echo '<input type="hidden" name="plan_id" value="' . (int) $plan->id . '">';
@@ -755,7 +755,7 @@ class SD_Plans {
 			echo '<p class="sd-help">Σημείωση (όπως στην πλατφόρμα): ' . esc_html( $plan->team_note ) . '</p>';
 		}
 		if ( current_user_can( SD_Roles::CAP_MANAGE ) ) {
-			$users = SD_Roles::app_users();
+			$users = SD_Roles::people( array_merge( $members, array( (int) $plan->coordinator_id ) ) );
 			echo '<details><summary>Ορισμός ομάδας</summary>';
 			SD_Frontend::form_open( 'save_team' );
 			echo '<input type="hidden" name="plan_id" value="' . (int) $plan->id . '">';

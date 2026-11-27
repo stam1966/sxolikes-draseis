@@ -607,7 +607,7 @@ class SD_Frontend {
 		foreach ( SD_Data::class_teachers( $class->id ) as $t ) {
 			$current[ $t->class_role ][] = (int) $t->user_id;
 		}
-		$users = SD_Roles::app_users();
+		$users = SD_Roles::people( $current ? array_merge( ...array_values( $current ) ) : array() );
 
 		echo '<p><a href="' . esc_url( self::url( 'taxeis' ) ) . '">← Όλα τα τμήματα</a></p>';
 		echo '<h2>Τμήμα ' . esc_html( SD_Data::class_label( $class ) ) . '</h2>';

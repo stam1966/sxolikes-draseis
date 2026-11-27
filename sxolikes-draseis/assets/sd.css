@@ -173,13 +173,13 @@ fieldset.sd-card legend { font-weight: 600; padding: 0 .3rem; }
 .sd-burger::before { top: -6px; }
 .sd-burger::after { top: 6px; }
 .sd-who { border-top: 1px solid var(--sd-line); padding-top: .4rem; }
-@media (min-width: 901px) {
+@media (min-width: 1121px) {
 	.sd-nav .sd-nav-admin details:not([open]) ul { display: none; }
 	.sd-nav-admin details[open] ul { position: absolute; right: 0; top: 100%; z-index: 20; background: #fff; border: 1px solid var(--sd-line); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.08); flex-direction: column; min-width: 180px; }
 	.sd-nav-admin details[open] ul a { background: transparent; display: block; }
 	.sd-nav-admin details[open] ul a[aria-current="page"] { background: var(--sd-accent); }
 }
-@media (max-width: 900px) {
+@media (max-width: 1120px) {
 	.sd-nav-toggle { display: block; }
 	.sd-nav .sd-nav-main { display: none; flex-direction: column; align-items: stretch; }
 	.sd-nav .sd-nav-toggle[open] ~ .sd-nav-main { display: flex; }
@@ -409,8 +409,8 @@ body.sd-body {
 .sd-login-note { margin: 1.2rem 0 0; padding-top: 1rem; border-top: 1px solid var(--sd-line); font-size: .82rem; color: var(--sd-muted); }
 .sd-app input[type="password"], .sd-app input[type="email"], .sd-app input[type="url"] { font: inherit; border: 1px solid #cfd6d2; border-radius: 8px; padding: .5rem .6rem; background: #fff; }
 .sd-app input[type="url"] { width: 100%; box-sizing: border-box; }
-@media (min-width: 901px) { .sd-nav .sd-nav-main { flex-wrap: nowrap; } .sd-nav-main > li > a, .sd-nav-admin summary { padding: .4rem .7rem; font-size: .95rem; white-space: nowrap; } }
-@media (min-width: 901px) and (max-width: 1080px) { .sd-nav-main > li > a, .sd-nav-admin summary { padding: .38rem .5rem; font-size: .88rem; } .sd-nav-no { display: none; } }
+@media (min-width: 1121px) { .sd-nav .sd-nav-main { flex-wrap: nowrap; } .sd-nav-main > li > a, .sd-nav-admin summary { padding: .4rem .7rem; font-size: .95rem; white-space: nowrap; } }
+@media (min-width: 1121px) and (max-width: 1240px) { .sd-nav-main > li > a, .sd-nav-admin summary { padding: .38rem .5rem; font-size: .88rem; } .sd-nav-no { display: none; } }
 
 /* Εισαγωγή σχεδίου από την πλατφόρμα */
 .sd-steps { padding-left: 1.3rem; margin: .3rem 0 .8rem; }
@@ -513,7 +513,7 @@ body.sd-body {
 .sd-nav-main > li > a:hover, .sd-nav-admin summary:hover { background: #fff; color: var(--sd-accent-dark); }
 .sd-app .sd-nav-main a[aria-current="page"], .sd-app .sd-nav-admin a[aria-current="page"] { background: var(--sd-ink); color: #fff; box-shadow: none; }
 .sd-nav-no { display: none; }
-@media (max-width: 900px) {
+@media (max-width: 1120px) {
 	.sd-nav { background: #fff; border: 1px solid var(--sd-line); border-radius: var(--sd-radius); padding: .4rem .6rem; }
 }
 
@@ -955,3 +955,67 @@ details.sd-inline-edit > summary { font-size: .88rem; }
 .sd-arx-deg.is-d1 { background: #f8e1df; color: #8a2b22; }
 .sd-arx-prev { border-top: 1px solid #e3ecea; margin-top: 1rem; padding-top: .5rem; }
 .sd-arx-ai { white-space: pre-wrap; background: #f6faf9; border: 1px solid #d6e2e0; border-radius: 12px; padding: 1rem; line-height: 1.55; }
+
+/* ===== 0.23: Πτυσσόμενες κάρτες (ακορντεόν) ===== */
+.sd-fold { padding: 0; overflow: clip; margin: 0 0 .8rem; transition: box-shadow .2s ease, border-color .2s ease; }
+.sd-fold:hover { border-color: #c9dbd8; }
+.sd-fold[open] { box-shadow: 0 1px 2px rgba(23,48,47,.06), 0 14px 32px -18px rgba(23,48,47,.3); }
+.sd-app details.sd-fold > summary.sd-fold-head {
+	list-style: none; cursor: pointer; color: var(--sd-ink); font-weight: inherit;
+	display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "t c" "m c";
+	align-items: center; gap: .3rem 1rem; padding: 1.05rem 1.3rem; min-height: 3rem;
+}
+.sd-fold-head::-webkit-details-marker { display: none; }
+.sd-fold-head:focus-visible { outline: 3px solid var(--sd-accent); outline-offset: -3px; border-radius: var(--sd-radius); }
+.sd-fold-title { grid-area: t; display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .6rem; font-weight: 750; font-size: 1.1rem; letter-spacing: -.01em; line-height: 1.3; }
+.sd-fold-title .sd-badge { margin: 0; font-weight: 600; letter-spacing: 0; }
+.sd-fold-meta { grid-area: m; display: flex; flex-wrap: wrap; gap: .15rem 0; color: var(--sd-muted); font-size: .88rem; line-height: 1.45; }
+.sd-fold-meta > span { white-space: nowrap; }
+.sd-fold-meta > span:not(:last-child)::after { content: "·"; margin: 0 .55rem; color: #a7b7b5; }
+.sd-fold-chev { grid-area: c; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: var(--sd-accent-soft); color: var(--sd-accent-dark); display: grid; place-items: center; flex: none; transition: background .2s ease; }
+.sd-fold-chev svg { transition: transform .2s ease; }
+.sd-fold[open] > .sd-fold-head .sd-fold-chev svg { transform: rotate(180deg); }
+.sd-fold-head:hover .sd-fold-chev { background: #cfe5e2; }
+.sd-fold[open] > .sd-fold-head { border-bottom: 1px solid #e3ecea; }
+.sd-fold-body { padding: 1.1rem 1.3rem 1.3rem; }
+.sd-fold-body > :first-child { margin-top: 0; }
+.sd-fold-body > :last-child { margin-bottom: 0; }
+.sd-fold-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: 1rem; }
+.sd-fold-actions .sd-meta { margin: 0 0 0 .25rem; }
+.sd-fold-tools { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin: 1.4rem 0 .6rem; }
+.sd-fold-label { font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--sd-muted); }
+.sd-fold-all { margin-left: auto; }
+.sd-app .sd-fold-all { background: none; border: 0; padding: .35rem .2rem; font: inherit; font-size: .9rem; font-weight: 600; color: var(--sd-accent-dark); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: #9cc3bf; }
+.sd-app .sd-fold-all:hover { text-decoration-color: currentColor; }
+.sd-fold .sd-arx-plan:first-child { padding-top: 0; }
+.sd-fold .sd-arx-plan:last-child { padding-bottom: 0; }
+@media (prefers-reduced-motion: reduce) { .sd-fold, .sd-fold-chev, .sd-fold-chev svg { transition: none; } }
+@media (max-width: 640px) {
+	.sd-app details.sd-fold > summary.sd-fold-head { padding: .9rem 1rem; gap: .25rem .75rem; }
+	.sd-fold-body { padding: 1rem; }
+	.sd-fold-title { font-size: 1.02rem; }
+	.sd-fold-meta { font-size: .84rem; }
+	/* Πίνακας σε κάρτες: κάθε γραμμή μια ομάδα «ετικέτα – τιμή». */
+	.sd-table-stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+	.sd-table-stack, .sd-table-stack tbody, .sd-table-stack tr, .sd-table-stack td { display: block; width: 100%; }
+	.sd-app .sd-table-stack { border: 0; border-radius: 0; background: transparent; margin: 0 0 .5rem; }
+	.sd-app .sd-table-stack tr { border: 0; border-radius: 0; margin: 0; padding: .75rem 0; background: transparent; border-bottom: 1px solid #e3ecea; }
+	.sd-app .sd-table-stack tr:first-child { padding-top: 0; }
+	.sd-app .sd-table-stack tr:last-child { border-bottom: 0; }
+	.sd-app .sd-table-stack tbody tr:hover td { background: transparent; }
+	.sd-app .sd-table-stack td { display: grid; grid-template-columns: 7.2rem minmax(0, 1fr); gap: .6rem; border: 0; padding: .15rem 0; }
+	.sd-table-stack td::before { content: attr(data-th); color: var(--sd-muted); font-size: .84rem; font-weight: 600; }
+	.sd-fold .sd-table-wrap { overflow: visible; }
+}
+/* Ευανάγνωστο μήκος γραμμής στα εισαγωγικά κείμενα. */
+.sd-app h2 + p.sd-help, .sd-app h2 + .sd-help, .sd-fold-body > p, .sd-fold-body > .sd-help { max-width: 72ch; }
+.sd-guide > h4:first-child { margin-top: 0; }
+.sd-guide li { max-width: 75ch; line-height: 1.6; }
+.sd-guide h4 { margin-top: 1.1rem; }
+/* Πεδία φορμών σε πτυσσόμενες κάρτες: άνετο, όχι υπερβολικό πλάτος. */
+.sd-fold-body .sd-block input:not([type="checkbox"]):not([type="radio"]), .sd-fold-body .sd-block select { display: block; width: 100%; max-width: 42rem; margin-top: .35rem; }
+.sd-fold-body .sd-block textarea, .sd-fold-body > textarea { max-width: 60rem; }
+.sd-fold-body input[type="date"] { max-width: 15rem; }
+/* Καμία λίστα επιλογών πιο φαρδιά από την οθόνη. */
+.sd-app select { max-width: 100%; }
+.sd-app label { min-width: 0; }

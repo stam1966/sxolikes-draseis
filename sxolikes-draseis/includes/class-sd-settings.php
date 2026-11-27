@@ -36,9 +36,16 @@ class SD_Settings {
 		if ( '' !== $name ) {
 			update_option( 'sd_school_name', $name );
 		}
-		$logo = isset( $_POST['logo_url'] ) ? esc_url_raw( trim( wp_unslash( $_POST['logo_url'] ) ), array( 'https', 'http' ) ) : '';
-		update_option( 'sd_logo_url', $logo );
-		update_option( SD_Ai::OPT_PLACE, $card );
+		// Κάθε ενότητα των ρυθμίσεων έχει δική της φόρμα: αλλάζουν μόνο όσα πεδία στάλθηκαν.
+		if ( isset( $_POST['logo_url'] ) ) {
+			update_option( 'sd_logo_url', esc_url_raw( trim( wp_unslash( $_POST['logo_url'] ) ), array( 'https', 'http' ) ) );
+		}
+		if ( isset( $_POST['place_card'] ) ) {
+			update_option( SD_Ai::OPT_PLACE, $card );
+		}
+		if ( ! isset( $_POST['deadline_f1a'] ) ) {
+			return array( true, $back . '#topos' );
+		}
 		if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $dl ) ) {
 			update_option( SD_Workshops::OPT_DEADLINE, $dl );
 		}
@@ -65,40 +72,53 @@ class SD_Settings {
 
 	private static function site_entry() {
 		$html = self::site_entry_html();
-		echo '<section class="sd-card" id="eisodos"><h3>Είσοδος από την ιστοσελίδα του σχολείου</h3>';
+		echo SD_Docs::fold_open( 'Είσοδος από την ιστοσελίδα του σχολείου', '<span>Πλαίσιο με σύνδεσμο για την κεντρική ιστοσελίδα</span>', false, 'id="eisodos"' ); // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<p>Βάλτε αυτό το πλαίσιο στην κεντρική ιστοσελίδα του σχολείου, ώστε οι εκπαιδευτικοί να μπαίνουν με ένα κλικ. Οδηγεί στη σύνδεση και μετά στην αρχική τους.</p>';
 		echo '<div style="margin:1rem 0">' . $html . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<ol class="sd-steps"><li>Στη διαχείριση της κεντρικής ιστοσελίδας: <strong>Εμφάνιση → Widgets</strong> (ή μια σελίδα), προσθέστε μπλοκ <strong>«Προσαρμοσμένη HTML»</strong>.</li><li>Πατήστε «Αντιγραφή» εδώ και επικολλήστε τον κώδικα στο μπλοκ. Αποθήκευση.</li><li>Προαιρετικά, στο <strong>Εμφάνιση → Μενού</strong> προσθέστε «Προσαρμοσμένο σύνδεσμο» με κείμενο «Εκπαιδευτικοί» και διεύθυνση <code>' . esc_html( SD_Install::app_url() ) . '</code>.</li></ol>';
 		echo '<div class="sd-copy"><div class="sd-copy-head"><strong>Κώδικας για το μπλοκ «Προσαρμοσμένη HTML»</strong> <button class="sd-button sd-small" type="button" data-copy>Αντιγραφή</button></div>';
-		echo '<textarea rows="5" readonly>' . esc_textarea( $html ) . '</textarea></div></section>';
+		echo '<textarea rows="5" readonly>' . esc_textarea( $html ) . '</textarea></div>' . SD_Docs::fold_close(); // phpcs:ignore WordPress.Security.EscapeOutput
 	}
 
 	public static function render() {
 		echo '<h2>Ρυθμίσεις</h2>';
+		echo '<p class="sd-help">Κάθε ενότητα ανοίγει με ένα κλικ. Στην κεφαλίδα της φαίνεται η τρέχουσα κατάσταση.</p>';
+		$dl   = array();
+		foreach ( array( '1Α' => SD_Workshops::deadline(), 'Έντ. 4' => SD_F4::deadline() ) as $k => $d ) {
+			if ( $d ) {
+				$dl[] = '<span>' . esc_html( $k ) . ': ' . esc_html( mysql2date( 'd/m/Y', $d ) ) . '</span>';
+			}
+		}
+		$card = trim( SD_Ai::place_card() );
+		echo '<div class="sd-fold-group" data-fold-group>';
+		echo SD_Docs::fold_open( 'Σχολείο και προθεσμίες', '<span>' . esc_html( SD_Frontend::school_name() ) . '</span>' . implode( '', $dl ), true, 'id="vasika"' ); // phpcs:ignore WordPress.Security.EscapeOutput
 		SD_Frontend::form_open( 'save_settings' );
-		echo '<section class="sd-card"><label class="sd-block">Όνομα σχολείου (κεφαλίδα και εκτυπώσεις) <input name="school_name" value="' . esc_attr( SD_Frontend::school_name() ) . '"></label>';
+		echo '<label class="sd-block">Όνομα σχολείου (κεφαλίδα και εκτυπώσεις) <input name="school_name" value="' . esc_attr( SD_Frontend::school_name() ) . '"></label>';
 		echo '<label class="sd-block">Λογότυπο σχολείου (διεύθυνση εικόνας, π.χ. το εικονίδιο της ιστοσελίδας του σχολείου· κενό = το εικονίδιο του ιστότοπου ή «ΣΔ») <input type="url" name="logo_url" value="' . esc_attr( (string) get_option( 'sd_logo_url', '' ) ) . '" placeholder="https://…/favicon-150x150.png"></label>';
 		echo '<label class="sd-block">Προθεσμία καταχώρισης Σχεδίων Δράσης στην πλατφόρμα του ΙΕΠ (προαιρετικό) <input type="date" name="deadline_plans" value="' . esc_attr( SD_PlanUI::deadline() ) . '"></label>';
 		echo '<label class="sd-block">Προθεσμία υποβολής Εντύπου 1Α <input type="date" name="deadline_f1a" value="' . esc_attr( SD_Workshops::deadline() ) . '"></label>';
 		echo '<label class="sd-block">Προθεσμία Εντύπου 2 · Ενεργός Πολίτης (προαιρετικό) <input type="date" name="deadline_f2" value="' . esc_attr( SD_Timeline::deadline_f2() ) . '"></label>';
 		echo '<label class="sd-block">Προθεσμία Σχεδίου Δράσης Τμήματος · Πλατφόρμα 21+ (προαιρετικό) <input type="date" name="deadline_sxtm" value="' . esc_attr( SD_Timeline::deadline_sxtm() ) . '"></label>';
 		echo '<label class="sd-block">Προθεσμία υποβολής Εντύπου 4 (αποτίμηση, προαιρετικό) <input type="date" name="deadline_f4" value="' . esc_attr( SD_F4::deadline() ) . '"></label>';
-		echo '<p class="sd-help">Οι προθεσμίες εμφανίζονται στην αρχική οθόνη κάθε εκπαιδευτικού. Όσα βήματα τις ξεπεράσουν σημειώνονται «Εκπρόθεσμο».</p></section>';
-		echo '<section class="sd-card"><h3>Κάρτα τόπου</h3><p class="sd-help">Μνημεία, φυσικοί χώροι, φορείς, ΚΕΠΕΑ και προγράμματα της περιοχής. Μπαίνει σε κάθε prompt του βοηθού AI, ώστε οι προτάσεις να είναι ρεαλιστικές για τον τόπο μας. Χωρίς προσωπικά στοιχεία.</p>';
-		echo '<textarea name="place_card" rows="12" placeholder="π.χ.&#10;Μνημεία: Κάστρο Λαμίας, ...&#10;Φύση: Σπερχειός, Μαλιακός κόλπος, Οίτη, ...&#10;Φορείς: Δήμος Λαμιέων, ΚΕΠΕΑ ..., Αρχαιολογικό Μουσείο Λαμίας, ...">' . esc_textarea( SD_Ai::place_card() ) . '</textarea></section>';
-		echo '<p><button class="sd-button" type="submit">Αποθήκευση ρυθμίσεων</button></p></form>';
-
+		echo '<p class="sd-help">Οι προθεσμίες εμφανίζονται στην αρχική οθόνη κάθε εκπαιδευτικού. Όσα βήματα τις ξεπεράσουν σημειώνονται «Εκπρόθεσμο».</p>';
+		echo '<p><button class="sd-button" type="submit">Αποθήκευση</button></p></form>' . SD_Docs::fold_close(); // phpcs:ignore WordPress.Security.EscapeOutput
+		echo SD_Docs::fold_open( 'Κάρτα τόπου για τον βοηθό AI', '' !== $card ? '<span>' . (int) count( array_filter( array_map( 'trim', explode( "\n", $card ) ) ) ) . ' γραμμές</span>' : '<span>κενή</span>', false, 'id="topos"' ); // phpcs:ignore WordPress.Security.EscapeOutput
+		SD_Frontend::form_open( 'save_settings' );
+		echo '<p class="sd-help">Μνημεία, φυσικοί χώροι, φορείς, ΚΕΠΕΑ και προγράμματα της περιοχής. Μπαίνει σε κάθε prompt του βοηθού AI, ώστε οι προτάσεις να είναι ρεαλιστικές για τον τόπο μας. Χωρίς προσωπικά στοιχεία.</p>';
+		echo '<textarea name="place_card" rows="12" placeholder="π.χ.&#10;Μνημεία: Κάστρο Λαμίας, ...&#10;Φύση: Σπερχειός, Μαλιακός κόλπος, Οίτη, ...&#10;Φορείς: Δήμος Λαμιέων, ΚΕΠΕΑ ..., Αρχαιολογικό Μουσείο Λαμίας, ...">' . esc_textarea( SD_Ai::place_card() ) . '</textarea>';
+		echo '<p><button class="sd-button" type="submit">Αποθήκευση</button></p></form>';
 		SD_Frontend::form_open( 'load_place_card' );
 		echo '<p class="sd-help">Έτοιμη κάρτα τόπου για τη Ροδίτσα και τη Φθιώτιδα, ελεγμένη με επίσημες πηγές (ίδια βάση με τον Χάρτη τόπου). Αντικαθιστά ό,τι έχει γραφτεί παραπάνω.</p>';
-		echo '<p><button class="sd-button sd-small" type="submit" onclick="return confirm(\'Να αντικατασταθεί η κάρτα τόπου με την έτοιμη;\');">Φόρτωση έτοιμης κάρτας τόπου</button></p></form>';
+		echo '<p><button class="sd-button sd-small sd-quiet" type="submit" onclick="return confirm(\'Να αντικατασταθεί η κάρτα τόπου με την έτοιμη;\');">Φόρτωση έτοιμης κάρτας τόπου</button></p></form>';
+		echo SD_Docs::fold_close(); // phpcs:ignore WordPress.Security.EscapeOutput
 
 		self::site_entry();
 		SD_Notify::render_settings();
 		SD_AiField::render_settings();
 
-		echo '<section class="sd-card" id="enimeroseis"><h3>Ενημερώσεις της εφαρμογής</h3><p>' . SD_Updater::status_html() . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		echo SD_Docs::fold_open( 'Ενημερώσεις της εφαρμογής', '<span>Έκδοση ' . esc_html( SD_VERSION ) . '</span>', false, 'id="enimeroseis"' ) . '<p>' . SD_Updater::status_html() . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<p class="sd-help">Οι νέες εκδόσεις έρχονται από το GitHub και εμφανίζονται στα «Πρόσθετα» της διαχείρισης του WordPress. Εκεί μπορείτε να ενεργοποιήσετε και τις αυτόματες ενημερώσεις.</p>';
 		SD_Frontend::form_open( 'update_check' );
-		echo '<button class="sd-button sd-small" type="submit">Έλεγχος τώρα</button></form></section>';
+		echo '<button class="sd-button sd-small" type="submit">Έλεγχος τώρα</button></form>' . SD_Docs::fold_close() . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput
 	}
 }

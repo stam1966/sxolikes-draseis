@@ -180,7 +180,7 @@ class SD_AiField {
 
 	public static function render_settings() {
 		$c = self::cfg();
-		echo '<section class="sd-card" id="ai"><h3>Βοηθός AI μέσα στις φόρμες (✨)</h3>';
+		echo SD_Docs::fold_open( 'Βοηθός AI μέσα στις φόρμες (✨)', '<span>' . ( self::api_on() ? esc_html( self::PROVIDERS[ $c['provider'] ] ) : 'μόνο αντιγραφή prompt' ) . '</span>', false, 'id="ai"' ); // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<p class="sd-help">Σε κάθε πεδίο κειμένου των εντύπων υπάρχει κουμπί ✨. <strong>Χωρίς κλειδί</strong> φτιάχνει prompt για το πεδίο, το αντιγράφει και ανοίγει το δωρεάν ChatGPT, Claude ή Gemini του/της εκπαιδευτικού. <strong>Με κλειδί API</strong> η πρόταση εμφανίζεται κατευθείαν κάτω από το πεδίο.</p>';
 		echo '<details><summary>Τι πρέπει να ξέρετε πριν βάλετε κλειδί</summary><ul class="sd-help">';
 		echo '<li>Στέλνονται στην υπηρεσία τα στοιχεία του εντύπου και η κάρτα τόπου. Η εφαρμογή δεν στέλνει ονόματα εκπαιδευτικών· οι συνάδελφοι δεν πρέπει να γράφουν ονόματα μαθητών στα πεδία.</li>';
@@ -219,7 +219,7 @@ class SD_AiField {
 			SD_Frontend::form_open( 'ai_models' );
 			echo '<button class="sd-button sd-small sd-quiet" type="submit">Έλεγχος σύνδεσης και ανανέωση μοντέλων</button></form>';
 		}
-		echo '</section>';
+		echo SD_Docs::fold_close(); // phpcs:ignore WordPress.Security.EscapeOutput
 	}
 
 	/* =================== Σήμανση σελίδας =================== */
