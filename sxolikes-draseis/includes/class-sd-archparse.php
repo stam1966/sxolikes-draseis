@@ -33,7 +33,12 @@ class SD_ArchParse {
 		'trainings'    => 'Επιμορφώσεις που υλοποιήθηκαν',
 		'practices'    => 'Προτάσεις για αξιοποίηση των πρακτικών',
 		'train_needs'  => 'Προτάσεις για αναγκαίες επιμορφώσεις',
+		'feedback'     => 'Ανατροφοδότηση – Προτάσεις Συμβούλου Εκπαίδευσης',
 	);
+
+	/** Ετικέτες που στην αντιγραφή από PDF βρίσκονται μέσα σε γραμμή: ξεκινούν νέα γραμμή. */
+	const SPLIT_LEGACY = '/\s*(Στόχος Βελτίωσης:|Σχέδιο Δράσης:|Άξονας:|Συντονιστ(?:ής|ρια|ές) Δράσης:)/u';
+	const SPLIT_REPORT = '/\s*(\(Αξιολόγηση:\s*[1-4]\)|(?<![\p{L}])Θετικά σημεία(?=\s)|(?<![\p{L}])Σημεία προς βελτίωση(?=\s))\s*/u';
 
 	private static function n( $s ) {
 		return SD_PlanImport::norm( $s );
@@ -93,8 +98,13 @@ class SD_ArchParse {
 	}
 
 	/** Γραμμές χωρίς κεφαλίδες εξαγωγής και αριθμούς σελίδων. */
-	private static function lines( $text ) {
+	private static function lines( $text, $split = '' ) {
 		$out = array();
+		if ( $split ) {
+			$text = preg_replace( $split, "
+$1
+", (string) $text );
+		}
 		foreach ( SD_PlanImport::lines( $text ) as $l ) {
 			$n = self::n( $l );
 			if ( preg_match( '/^\d{1,2}$/', $l ) || preg_match( '/^(σχολικη μοναδα|σχολικο ετοσ|ημερομηνια εξαγωγησ)\b/u', $n ) ) {
@@ -161,17 +171,17 @@ class SD_ArchParse {
 		'αξονασ:'                                 => 'axis',
 		'συντονιστησ δρασησ'                      => 'skip',
 		'συντονιστρια δρασησ'                     => 'skip',
-		'α. σχεδιασμοσ τησ δρασησ'                => 'skip',
+		'α. σχεδιασμοσ τησ δρασησ'                => 'keep',
 		'αναγκαιοτητα'                            => 'need',
 		'ενεργειεσ & χρονοδιαγραμμα'              => 'actions',
 		'ενεργειεσ και χρονοδιαγραμμα'            => 'actions',
 		'ποροι'                                   => 'resources',
 		'κριτηρια επιτυχιασ'                      => 'criteria',
 		'διαδικασιεσ αξιολογησησ'                 => 'evalproc',
-		'ανατροφοδοτηση'                          => 'skip',
+		'ανατροφοδοτηση'                          => 'feedback',
 		'β. υλοποιηση τησ δρασησ'                 => 'implement',
 		'περιγραφη'                               => 'implement',
-		'γ. αποτιμηση τησ δρασησ'                 => 'skip',
+		'γ. αποτιμηση τησ δρασησ'                 => 'keep',
 		'αλλαγεσ σε σχεση'                        => 'changes',
 		'αποτελεσματα τησ δρασησ'                 => 'achieved',
 		'σημαντικοτερα αποτελεσματα'              => 'achieved',
@@ -194,8 +204,15 @@ class SD_ArchParse {
 		$b    = array_fill_keys( array( 'goal', 'title', 'axis', 'need', 'achieved', 'degree', 'difficulties', 'next_steps' ), '' );
 		$b   += array_fill_keys( array_keys( self::SECTIONS ), '' );
 		$cur  = '';
-		foreach ( self::lines( $text ) as $line ) {
+		foreach ( self::lines( $text, self::SPLIT_LEGACY ) as $line ) {
 			$h = self::heading( $line, self::LEGACY );
+			if ( $h && 'keep' === $h[0] ) {
+				continue;
+			}
+			if ( $h && 'feedback' === $h[0] ) {
+				$cur = 'feedback';
+				continue;
+			}
 			if ( $h ) {
 				$cur = $h[0];
 				if ( 'skip' !== $cur && '' !== $h[1] ) {
@@ -281,6 +298,11 @@ class SD_ArchParse {
 			if ( preg_match( '/^[\p{Lu}\s.\-]+$/u', $line ) && ! preg_match( '/\p{Ll}/u', $line ) && count( preg_split( '/\s+/u', trim( $line ) ) ) <= 4 && false === mb_strpos( $line, '«' ) ) {
 				continue;
 			}
+			// Στο PDF οι στήλες ανακατεύονται: λέξεις μόνο με κεφαλαία μέσα σε κείμενο με πεζά είναι ονόματα συντονιστών.
+			if ( preg_match( '/\p{Ll}/u', $line ) ) {
+				$line = trim( preg_replace( '/(?<![\p{L}])\p{Lu}{4,}(?![\p{L}.])/u', '', $line ) );
+				$line = preg_replace( '/\s{2,}/u', ' ', $line );
+			}
 			$block[] = preg_replace( '/^\d+\s+(?=\p{Lu})/u', '', $line );
 		}
 		$flush();
@@ -309,7 +331,7 @@ class SD_ArchParse {
 		$func = '';
 		$item = null;
 		$in_c = false;
-		foreach ( self::lines( $text ) as $line ) {
+		foreach ( self::lines( $text, self::SPLIT_REPORT ) as $line ) {
 			$n = self::n( $line );
 			if ( 0 === mb_strpos( $n, 'β. συνολικη αποτιμηση' ) ) {
 				$mode = '';
