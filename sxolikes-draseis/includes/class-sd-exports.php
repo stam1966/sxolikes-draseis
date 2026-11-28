@@ -129,6 +129,17 @@ class SD_Exports {
 				}
 				self::out( self::slug( 'Σχεδιο-Δρασης-Σχολικης-Μοναδας-Εργαστηρια-' . $y ), SD_ErgPlan::school_blocks( $year ) );
 				break;
+			case 'meleti':
+				$file = SD_Map::guide_file();
+				if ( ! $file ) {
+					wp_die( 'Ο οδηγός μελέτης δεν βρέθηκε.', 404 );
+				}
+				nocache_headers();
+				header( 'Content-Type: application/pdf' );
+				header( 'Content-Disposition: attachment; filename="odigos-meletis-ekpaideftikou.pdf"; filename*=UTF-8\'\'' . rawurlencode( 'Οδηγός μελέτης εκπαιδευτικού.pdf' ) );
+				header( 'Content-Length: ' . filesize( $file ) );
+				readfile( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+				exit;
 			case 'odigos':
 				self::out( self::slug( 'Οδηγος-Σχολικες-Δρασεις' ), SD_Guide::doc_blocks( 1 === $id ), false, 12 );
 				break;

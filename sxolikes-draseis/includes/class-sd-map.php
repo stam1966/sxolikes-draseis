@@ -175,8 +175,15 @@ class SD_Map {
 			'checked' => isset( $o['checked'] ) ? $o['checked'] : '',
 			'public'  => (bool) $public,
 			'schoolName' => SD_Frontend::school_name(),
-			'guideUrl'   => file_exists( SD_DIR . 'assets/docs/odigos-ekpaideftikou.pdf' ) ? SD_URL . 'assets/docs/odigos-ekpaideftikou.pdf?ver=' . SD_VERSION : '',
+			// Ο οδηγός μελέτης μόνο μέσα στην εφαρμογή, όχι στον δημόσιο χάρτη.
+			'guideUrl'   => ( ! $public && self::guide_file() && current_user_can( SD_Roles::CAP_ACCESS ) ) ? str_replace( '&amp;', '&', SD_Exports::url( 'meleti', 0 ) ) : '',
 		);
+	}
+
+	/** Το PDF του οδηγού μελέτης για τον εκπαιδευτικό (κενό αν λείπει). */
+	public static function guide_file() {
+		$f = SD_DIR . 'assets/docs/odigos-ekpaideftikou.pdf';
+		return file_exists( $f ) ? $f : '';
 	}
 
 	/** Οι φωτογραφίες που ανέβασε η Διεύθυνση για κάθε ελεγμένο τόπο. */
@@ -577,6 +584,13 @@ class SD_Map {
 		echo '<h2>Χάρτης Τοπικής Ιστορίας και Γεωγραφίας</h2>';
 		echo '<p class="sd-help">Ελεγμένα δελτία τόπων (έλεγχος ' . esc_html( mysql2date( 'd/m/Y', self::official()['checked'] ?? '' ) ) . ') και τα σημεία που προσθέτουν οι τάξεις. Στην τάξη: «Προβολή» για μεγάλα γράμματα στον προβολέα, «Διαδρομές» για ξενάγηση βήμα-βήμα.</p>';
 		self::map_box( false, 'sd-map-app' );
+		echo '<section class="sd-card"><h3>Οδηγοί για τον εκπαιδευτικό</h3>';
+		echo '<p class="sd-help">Μόνο για τους συνδεδεμένους εκπαιδευτικούς· δεν εμφανίζονται στον δημόσιο χάρτη.</p><p>';
+		if ( self::guide_file() ) {
+			echo '<a class="sd-button" href="' . esc_url( SD_Exports::url( 'meleti', 0 ) ) . '">Οδηγός μελέτης (PDF)</a> ';
+		}
+		echo '<a class="sd-button sd-small sd-quiet" href="' . esc_url( SD_Frontend::url( 'voitheia' ) . '#odigos-xartis' ) . '">Πώς δουλεύει ο χάρτης</a></p>';
+		echo '<p class="sd-help">Ο οδηγός μελέτης έχει όλες τις εποχές (Μύθοι, Αρχαιότητα, Βυζάντιο–Τουρκοκρατία, 1821, 1897, Κατοχή) και τη γεωγραφία του τόπου: πλαίσιο, χρονολόγιο, τόποι, τι είναι βέβαιο και τι συζητείται, ιδέες για την τάξη, πηγές.</p></section>';
 		if ( current_user_can( SD_Roles::CAP_MANAGE ) ) {
 			echo '<p><a class="sd-button sd-small sd-quiet" href="' . esc_url( SD_Frontend::url( 'xartis', array( 'fotografies' => 1 ) ) ) . '">Φωτογραφίες των ελεγμένων τόπων</a></p>';
 		}
