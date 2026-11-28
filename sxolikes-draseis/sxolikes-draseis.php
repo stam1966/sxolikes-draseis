@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Σχολικές Δράσεις
  * Description:       Σχεδιασμός Εργαστηρίων Δεξιοτήτων και Δράσεων Ενεργού Πολίτη, συνδεδεμένων με τα Σχέδια Δράσης της εσωτερικής αξιολόγησης.
- * Version:           0.23.0
+ * Version:           0.23.1
  * Update URI:        https://github.com/stam1966/sxolikes-draseis
  * Requires at least: 6.2
  * Requires PHP:      7.4
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SD_VERSION', '0.23.0' );
+define( 'SD_VERSION', '0.23.1' );
 define( 'SD_DB_VERSION', '9' );
 define( 'SD_FILE', __FILE__ );
 define( 'SD_DIR', plugin_dir_path( __FILE__ ) );
