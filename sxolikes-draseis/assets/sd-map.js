@@ -296,6 +296,9 @@
 		L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
 		this.routeLayer = L.layerGroup().addTo(map);
 		this.measureLayer = L.layerGroup().addTo(map);
+		this.clusterLayer = L.layerGroup().addTo(map);
+		this.shown = [];
+		map.on('zoomend', function () { self.cluster(); });
 
 		if (data.standalone) {
 			try {
@@ -525,6 +528,7 @@
 		if (!stops.length) { return; }
 		this.route = { r: r, stops: stops };
 		this.step = -1;
+		this.cluster();
 		L.polyline(stops.map(function (s) { return s.m.getLatLng(); }), { color: '#1c6b6c', weight: 4, dashArray: '2 9', lineCap: 'round', opacity: 0.9 }).addTo(this.routeLayer);
 		Object.keys(this.markers).forEach(function (k) { self.markers[k].m.setOpacity(0.25); });
 		stops.forEach(function (s, i) { s.m.setIcon(icon(s.p, i + 1)); s.m.setOpacity(1); s.m.setZIndexOffset(500); if (!self.map.hasLayer(s.m)) { s.m.addTo(self.map); } });
@@ -604,9 +608,75 @@
 		])]);
 	};
 
+	/*
+	 * Κοντινά σημεία που πέφτουν το ένα πάνω στο άλλο γίνονται ένας κύκλος με αριθμό.
+	 * Με κλικ (ή μεγέθυνση) χωρίζουν. Όχι σε διαδρομή, στην κοιλάδα ή από κοντά.
+	 */
+	MapApp.prototype.cluster = function () {
+		var self = this, map = this.map, R = 34;
+		this.clusterLayer.clearLayers();
+		var ids = (this.shown || []).slice();
+		var off = this.route || this.valleyOn || map.getZoom() >= 13;
+		ids.forEach(function (id) { var m = self.markers[id].m; if (!map.hasLayer(m)) { m.addTo(map); } });
+		if (off || ids.length < 2) { return; }
+		var groups = [];
+		ids.forEach(function (id) {
+			if (id === self.current) { return; }
+			var pt = map.latLngToLayerPoint(self.markers[id].m.getLatLng());
+			var g = null;
+			for (var i = 0; i < groups.length; i++) {
+				if (groups[i].pt.distanceTo(pt) < R) { g = groups[i]; break; }
+			}
+			if (g) { g.ids.push(id); g.pts.push(pt); } else { groups.push({ pt: pt, ids: [id], pts: [pt] }); }
+		});
+		// Ομάδες που ακουμπούν μεταξύ τους ενώνονται (κέντρο = μέσος όρος), ώσπου να μην επικαλύπτεται καμία.
+		var merged = true;
+		while (merged) {
+			merged = false;
+			groups.forEach(function (g) {
+				var x = 0, y = 0;
+				g.pts.forEach(function (q) { x += q.x; y += q.y; });
+				g.pt = L.point(x / g.pts.length, y / g.pts.length);
+			});
+			for (var a = 0; a < groups.length && !merged; a++) {
+				for (var b = a + 1; b < groups.length; b++) {
+					var lim = (groups[a].ids.length > 1 || groups[b].ids.length > 1) ? R + 10 : R;
+					if (groups[a].pt.distanceTo(groups[b].pt) < lim) {
+						groups[a].ids = groups[a].ids.concat(groups[b].ids);
+						groups[a].pts = groups[a].pts.concat(groups[b].pts);
+						groups.splice(b, 1);
+						merged = true;
+						break;
+					}
+				}
+			}
+		}
+		groups.forEach(function (g) {
+			if (g.ids.length < 2) { return; }
+			var lls = g.ids.map(function (id) { return self.markers[id].m.getLatLng(); });
+			g.ids.forEach(function (id) { map.removeLayer(self.markers[id].m); });
+			var lat = 0, lng = 0;
+			lls.forEach(function (ll) { lat += ll.lat; lng += ll.lng; });
+			var n = g.ids.length, size = n < 5 ? 38 : (n < 10 ? 44 : 50);
+			var names = g.ids.slice(0, 5).map(function (id) { return self.markers[id].p.name; });
+			var c = L.marker([lat / n, lng / n], {
+				icon: L.divIcon({ className: 'sdm-pin-wrap', html: '<span class="sdm-cluster" style="width:' + size + 'px;height:' + size + 'px">' + n + '</span>', iconSize: [size + 4, size + 4], iconAnchor: [(size + 4) / 2, (size + 4) / 2] }),
+				title: n + ' τόποι: πατήστε για να χωρίσουν', alt: n + ' τόποι', riseOnHover: true
+			});
+			c.bindTooltip(names.join(', ') + (n > 5 ? ' και ' + (n - 5) + ' ακόμη' : ''), { direction: 'top', offset: [0, -size / 2], className: 'sdm-tip' });
+			c.on('click', function () {
+				var b = L.latLngBounds(lls);
+				if (b.getNorthEast().distanceTo(b.getSouthWest()) < 30) { map.flyTo(b.getCenter(), 15, { duration: 0.6 }); }
+				else { map.flyToBounds(b.pad(0.4), { maxZoom: 15, duration: 0.6 }); }
+			});
+			self.clusterLayer.addLayer(c);
+		});
+	};
+
 	MapApp.prototype.refresh = function (fit) {
 		var self = this, data = this.data, shown = 0;
 		if (this.route) { return; }
+		this.shown = [];
 		this.list.textContent = '';
 		var items = Object.keys(this.markers).map(function (k) { return self.markers[k]; });
 		if (data.school) { items.sort(function (a, b) { return km(data.school, a.p) - km(data.school, b.p); }); }
@@ -614,6 +684,7 @@
 			var on = self.visible(it.p);
 			if (on) {
 				if (!self.map.hasLayer(it.m)) { it.m.addTo(self.map); }
+				self.shown.push(it.p.id);
 				shown++;
 				if (self.mode === 'explore') { self.list.appendChild(self.listItem(it.p)); }
 			} else if (self.map.hasLayer(it.m)) {
@@ -625,6 +696,7 @@
 			this.list.appendChild(el('li', { class: 'sdm-empty' }, ['Κανένας τόπος δεν ταιριάζει. ', el('button', { type: 'button', class: 'sdm-link', text: 'Καθαρισμός φίλτρων', onclick: function () { self.clearFilters(); } })]));
 		}
 		if (fit && shown && !this.valleyOn) { this.fitVisible(); }
+		this.cluster();
 	};
 
 	MapApp.prototype.clearFilters = function () {
@@ -638,7 +710,7 @@
 
 	MapApp.prototype.fitVisible = function () {
 		var self = this, pts = [];
-		Object.keys(this.markers).forEach(function (k) { if (self.map.hasLayer(self.markers[k].m)) { pts.push(self.markers[k].m.getLatLng()); } });
+		(this.shown || []).forEach(function (k) { pts.push(self.markers[k].m.getLatLng()); });
 		if (pts.length) { this.map.fitBounds(L.latLngBounds(pts).pad(0.1), { maxZoom: 12 }); }
 	};
 
@@ -657,7 +729,7 @@
 		var p = it.p, sh = this.sheet;
 		if (this.current && this.markers[this.current] && !this.route) { this.markers[this.current].m.setIcon(icon(this.markers[this.current].p)); }
 		this.current = id;
-		if (!this.route) { it.m.setIcon(icon(p, 0, true)); it.m.setZIndexOffset(800); }
+		if (!this.route) { it.m.setIcon(icon(p, 0, true)); it.m.setZIndexOffset(800); this.cluster(); }
 		Array.prototype.forEach.call(this.side.querySelectorAll('.sdm-item'), function (b) { b.classList.toggle('is-on', b.getAttribute('data-id') === id); });
 		sh.textContent = '';
 		sh.style.setProperty('--c', COLORS[p.cat] || '#444');
@@ -708,6 +780,7 @@
 		if (this.current && this.markers[this.current] && !this.route) { this.markers[this.current].m.setIcon(icon(this.markers[this.current].p)); this.markers[this.current].m.setZIndexOffset(0); }
 		this.current = '';
 		Array.prototype.forEach.call(this.side.querySelectorAll('.sdm-item'), function (b) { b.classList.remove('is-on'); });
+		this.cluster();
 	};
 
 	/* ---------- Επίπεδα ---------- */
@@ -717,8 +790,8 @@
 		box.appendChild(el('p', { class: 'sdm-layers-h', text: 'Υπόβαθρο' }));
 		var bases = el('div', { class: 'sdm-seg', role: 'radiogroup', 'aria-label': 'Υπόβαθρο' });
 		this.baseBtns = {
-			map: el('button', { type: 'button', role: 'radio', 'aria-checked': 'true', text: 'Χάρτης', onclick: function () { self.setBase('map'); } }),
-			topo: el('button', { type: 'button', role: 'radio', 'aria-checked': 'false', text: 'Ανάγλυφο', onclick: function () { self.setBase('topo'); } })
+			map: el('button', { type: 'button', role: 'radio', 'aria-checked': 'true', text: 'Χάρτης', onclick: function () { self.setBase('map'); self.layersPicked(); } }),
+			topo: el('button', { type: 'button', role: 'radio', 'aria-checked': 'false', text: 'Ανάγλυφο', onclick: function () { self.setBase('topo'); self.layersPicked(); } })
 		};
 		bases.appendChild(this.baseBtns.map);
 		bases.appendChild(this.baseBtns.topo);
@@ -727,7 +800,7 @@
 		this.ovBoxes = {};
 		Object.keys(this.overlays).forEach(function (k) {
 			var o = self.overlays[k];
-			var cb = el('input', { type: 'checkbox', onchange: function () { self.toggleOverlay(k, this.checked); } });
+			var cb = el('input', { type: 'checkbox', onchange: function () { self.toggleOverlay(k, this.checked); self.layersPicked(); } });
 			self.ovBoxes[k] = cb;
 			box.appendChild(el('label', { class: 'sdm-check' }, [cb, el('span', null, [el('strong', { text: o.label }), el('small', { text: o.hint })])]));
 		});
@@ -737,9 +810,26 @@
 	};
 
 	MapApp.prototype.toggleLayers = function (force) {
-		var open = force === undefined ? this.layersBox.hidden : force;
+		var self = this, open = force === undefined ? this.layersBox.hidden : force;
 		this.layersBox.hidden = !open;
 		this.layersBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+		if (open && !this.layersWired) {
+			// Κλείνει με κλικ έξω από το πλαίσιο ή με Esc.
+			this.layersWired = true;
+			document.addEventListener('click', function (e) {
+				if (!self.layersBox.hidden && !self.layersBox.contains(e.target) && !self.layersBtn.contains(e.target)) { self.toggleLayers(false); }
+			});
+			document.addEventListener('keydown', function (e) {
+				if (e.key === 'Escape' && !self.layersBox.hidden) { self.toggleLayers(false); self.layersBtn.focus(); }
+			});
+			this.map.on('click movestart', function () { if (!self.layersBox.hidden) { self.toggleLayers(false); } });
+		}
+	};
+
+	/* Μετά από μια επιλογή το πλαίσιο κλείνει, ώστε να φαίνεται ο χάρτης. */
+	MapApp.prototype.layersPicked = function () {
+		var self = this;
+		setTimeout(function () { self.toggleLayers(false); }, 250);
 	};
 
 	MapApp.prototype.setBase = function (k) {
