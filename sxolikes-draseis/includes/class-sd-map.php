@@ -181,8 +181,8 @@ class SD_Map {
 	}
 
 	/** Το PDF του οδηγού μελέτης για τον εκπαιδευτικό (κενό αν λείπει). */
-	public static function guide_file() {
-		$f = SD_DIR . 'assets/docs/odigos-ekpaideftikou.pdf';
+	public static function guide_file( $which = 0 ) {
+		$f = SD_DIR . 'assets/docs/' . ( 1 === (int) $which ? 'odigos-taxi.pdf' : 'odigos-ekpaideftikou.pdf' );
 		return file_exists( $f ) ? $f : '';
 	}
 
@@ -588,6 +588,9 @@ class SD_Map {
 		echo '<p class="sd-help">Μόνο για τους συνδεδεμένους εκπαιδευτικούς· δεν εμφανίζονται στον δημόσιο χάρτη.</p><p>';
 		if ( self::guide_file() ) {
 			echo '<a class="sd-button" href="' . esc_url( SD_Exports::url( 'meleti', 0 ) ) . '">Οδηγός μελέτης (PDF)</a> ';
+		}
+		if ( self::guide_file( 1 ) ) {
+			echo '<a class="sd-button" href="' . esc_url( SD_Exports::url( 'meleti', 1 ) ) . '">Η τάξη και ο τόπος (PDF)</a> ';
 		}
 		echo '<a class="sd-button sd-small sd-quiet" href="' . esc_url( SD_Frontend::url( 'voitheia' ) . '#odigos-xartis' ) . '">Πώς δουλεύει ο χάρτης</a></p>';
 		echo '<p class="sd-help">Ο οδηγός μελέτης έχει όλες τις εποχές (Μύθοι, Αρχαιότητα, Βυζάντιο–Τουρκοκρατία, 1821, 1897, Κατοχή) και τη γεωγραφία του τόπου: πλαίσιο, χρονολόγιο, τόποι, τι είναι βέβαιο και τι συζητείται, ιδέες για την τάξη, πηγές.</p></section>';

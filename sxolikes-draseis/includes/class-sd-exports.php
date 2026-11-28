@@ -130,7 +130,7 @@ class SD_Exports {
 				self::out( self::slug( 'Σχεδιο-Δρασης-Σχολικης-Μοναδας-Εργαστηρια-' . $y ), SD_ErgPlan::school_blocks( $year ) );
 				break;
 			case 'meleti':
-				$file = SD_Map::guide_file();
+				$file = SD_Map::guide_file( $id );
 				if ( ! $file ) {
 					wp_die( 'Ο οδηγός μελέτης δεν βρέθηκε.', 404 );
 				}
