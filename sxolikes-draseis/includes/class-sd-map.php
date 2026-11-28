@@ -31,6 +31,10 @@ class SD_Map {
 	const LIMIT_ACTIVITY = 300;
 	const PHOTO_MAX      = 4194304; // 4 MB
 
+	/** Φωτογραφίες των ελεγμένων τόπων: [κλειδί τόπου => [[att, credit, caption], …]]. */
+	const OPT_PHOTOS = 'sd_place_photos';
+	const PHOTOS_MAX = 6;
+
 	private static $official = null;
 
 	public static function init() {
@@ -164,10 +168,42 @@ class SD_Map {
 			'admin'   => isset( $o['admin_history'] ) ? $o['admin_history'] : array(),
 			'nomoi'   => isset( $o['nomoi'] ) ? $o['nomoi'] : array(),
 			'coasts'  => isset( $o['coastlines'] ) ? $o['coastlines'] : array(),
-			'places'  => array_merge( isset( $o['places'] ) ? $o['places'] : array(), self::class_points( $public ) ),
+			'places'  => array_merge( self::with_photos( isset( $o['places'] ) ? $o['places'] : array() ), self::class_points( $public ) ),
+			'periods' => isset( $o['periods'] ) ? $o['periods'] : array(),
+			'units'   => isset( $o['units'] ) ? $o['units'] : array(),
+			'valley'  => isset( $o['valley'] ) ? $o['valley'] : null,
 			'checked' => isset( $o['checked'] ) ? $o['checked'] : '',
 			'public'  => (bool) $public,
+			'schoolName' => SD_Frontend::school_name(),
 		);
+	}
+
+	/** Οι φωτογραφίες που ανέβασε η Διεύθυνση για κάθε ελεγμένο τόπο. */
+	public static function photos() {
+		$all = get_option( self::OPT_PHOTOS, array() );
+		return is_array( $all ) ? $all : array();
+	}
+
+	private static function with_photos( $places ) {
+		$all = self::photos();
+		foreach ( $places as &$p ) {
+			$list = array();
+			foreach ( $all[ $p['id'] ] ?? array() as $ph ) {
+				$src = wp_get_attachment_image_url( (int) $ph['att'], 'large' );
+				if ( $src ) {
+					$list[] = array(
+						'src'     => $src,
+						'credit'  => (string) $ph['credit'],
+						'caption' => (string) $ph['caption'],
+					);
+				}
+			}
+			if ( $list ) {
+				$p['photos'] = $list;
+			}
+		}
+		unset( $p );
+		return $places;
 	}
 
 	/* =================== Δικαιώματα =================== */
@@ -194,6 +230,9 @@ class SD_Map {
 
 	public static function handle( $do ) {
 		global $wpdb;
+		if ( in_array( $do, array( 'official_photo_add', 'official_photo_delete' ), true ) ) {
+			return self::handle_official_photo( $do );
+		}
 		if ( ! in_array( $do, array( 'place_save', 'place_submit', 'place_review', 'place_delete', 'place_unpublish' ), true ) ) {
 			return null;
 		}
@@ -346,6 +385,131 @@ class SD_Map {
 		return array( true, $list );
 	}
 
+	/** Φωτογραφίες ελεγμένων τόπων: μόνο η Διεύθυνση, με δήλωση δικαιωμάτων και δημιουργό. */
+	private static function handle_official_photo( $do ) {
+		$back = SD_Frontend::url( 'xartis', array( 'fotografies' => 1 ) );
+		if ( ! current_user_can( SD_Roles::CAP_MANAGE ) ) {
+			return array( new WP_Error( 'sd', 'Μόνο η Διεύθυνση προσθέτει φωτογραφίες στους ελεγμένους τόπους.' ), $back );
+		}
+		$key = isset( $_POST['place_key'] ) ? sanitize_key( wp_unslash( $_POST['place_key'] ) ) : '';
+		$ids = wp_list_pluck( self::official()['places'] ?? array(), 'id' );
+		if ( ! in_array( $key, $ids, true ) ) {
+			return array( new WP_Error( 'sd', 'Διαλέξτε τόπο.' ), $back );
+		}
+		$all  = self::photos();
+		$list = $all[ $key ] ?? array();
+		if ( 'official_photo_delete' === $do ) {
+			$i = isset( $_POST['idx'] ) ? absint( $_POST['idx'] ) : -1;
+			if ( isset( $list[ $i ] ) ) {
+				wp_delete_attachment( (int) $list[ $i ]['att'], true );
+				array_splice( $list, $i, 1 );
+			}
+			$all[ $key ] = $list;
+			update_option( self::OPT_PHOTOS, array_filter( $all ), false );
+			return array( true, $back . '#t-' . $key );
+		}
+		if ( count( $list ) >= self::PHOTOS_MAX ) {
+			return array( new WP_Error( 'sd', 'Έως ' . self::PHOTOS_MAX . ' φωτογραφίες ανά τόπο.' ), $back );
+		}
+		$credit = isset( $_POST['credit'] ) ? sanitize_text_field( wp_unslash( $_POST['credit'] ) ) : '';
+		if ( '' === $credit ) {
+			return array( new WP_Error( 'sd', 'Γράψτε ποιος τράβηξε τη φωτογραφία ή από πού είναι (π.χ. «Αρχείο σχολείου» ή «Wikimedia Commons, CC BY-SA»).' ), $back );
+		}
+		$att = self::store_upload();
+		if ( is_wp_error( $att ) ) {
+			return array( $att, $back );
+		}
+		$list[]      = array(
+			'att'     => (int) $att,
+			'credit'  => mb_substr( $credit, 0, 160 ),
+			'caption' => mb_substr( isset( $_POST['caption'] ) ? sanitize_text_field( wp_unslash( $_POST['caption'] ) ) : '', 0, 200 ),
+		);
+		$all[ $key ] = $list;
+		update_option( self::OPT_PHOTOS, $all, false );
+		return array( true, $back . '#t-' . $key );
+	}
+
+	/** Ανέβασμα εικόνας (JPG/PNG/WEBP, έως 4 MB) με δήλωση· επιστρέφει το attachment. */
+	private static function store_upload() {
+		if ( empty( $_POST['photo_ok'] ) ) {
+			return new WP_Error( 'sd', 'Για να ανέβει φωτογραφία, επιβεβαιώστε ότι έχετε δικαίωμα χρήσης και ότι δεν δείχνει πρόσωπα μαθητών.' );
+		}
+		$size = isset( $_FILES['photo']['size'] ) ? (int) $_FILES['photo']['size'] : 0;
+		if ( $size <= 0 || $size > self::PHOTO_MAX ) {
+			return new WP_Error( 'sd', 'Η φωτογραφία πρέπει να είναι έως 4 MB.' );
+		}
+		$mimes = array(
+			'jpg|jpeg' => 'image/jpeg',
+			'png'      => 'image/png',
+			'webp'     => 'image/webp',
+		);
+		$name  = isset( $_FILES['photo']['name'] ) ? sanitize_file_name( wp_unslash( $_FILES['photo']['name'] ) ) : '';
+		$check = wp_check_filetype( $name, $mimes );
+		if ( ! $check['type'] ) {
+			return new WP_Error( 'sd', 'Επιτρέπονται μόνο φωτογραφίες JPG, PNG ή WEBP.' );
+		}
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		$att = media_handle_upload( 'photo', 0, array(), array( 'test_form' => false, 'mimes' => $mimes ) );
+		if ( is_wp_error( $att ) ) {
+			return new WP_Error( 'sd', 'Η φωτογραφία δεν ανέβηκε: ' . $att->get_error_message() );
+		}
+		return $att;
+	}
+
+	/** Οθόνη: φωτογραφίες των ελεγμένων τόπων (Διεύθυνση). */
+	private static function render_photos() {
+		echo '<p class="sd-noprint"><a href="' . esc_url( SD_Frontend::url( 'xartis' ) ) . '">← Χάρτης</a></p>';
+		echo '<h2>Φωτογραφίες των ελεγμένων τόπων</h2>';
+		if ( ! current_user_can( SD_Roles::CAP_MANAGE ) ) {
+			echo '<p class="sd-notice sd-error">Μόνο η Διεύθυνση προσθέτει φωτογραφίες στους ελεγμένους τόπους.</p>';
+			return;
+		}
+		echo '<p class="sd-help">Οι φωτογραφίες εμφανίζονται στο πλαίσιο του τόπου, στον χάρτη της εφαρμογής και στον δημόσιο χάρτη. Μόνο δικές σας φωτογραφίες ή με ελεύθερη άδεια (π.χ. Wikimedia Commons), πάντα με τον δημιουργό. Όχι πρόσωπα μαθητών. Έως ' . (int) self::PHOTOS_MAX . ' ανά τόπο, έως 4 MB η καθεμία.</p>';
+		$places = self::official()['places'] ?? array();
+		usort(
+			$places,
+			function ( $a, $b ) {
+				return strcmp( remove_accents( $a['name'] ), remove_accents( $b['name'] ) );
+			}
+		);
+		$all = self::photos();
+		echo '<section class="sd-card"><h3>Νέα φωτογραφία</h3>';
+		echo '<form method="post" enctype="multipart/form-data" class="sd-form">';
+		wp_nonce_field( SD_Frontend::NONCE );
+		echo '<input type="hidden" name="sd_do" value="official_photo_add">';
+		echo '<label class="sd-block">Τόπος <select name="place_key" required><option value="">Διαλέξτε…</option>';
+		foreach ( $places as $p ) {
+			echo '<option value="' . esc_attr( $p['id'] ) . '">' . esc_html( $p['name'] ) . '</option>';
+		}
+		echo '</select></label>';
+		echo '<label class="sd-block">Αρχείο JPG, PNG ή WEBP έως 4 MB <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required></label>';
+		echo '<label class="sd-block">Δημιουργός / πηγή και άδεια <input name="credit" maxlength="160" required placeholder="π.χ. Αρχείο σχολείου ή Wikimedia Commons, CC BY-SA"></label>';
+		echo '<label class="sd-block">Λεζάντα (προαιρετικά) <input name="caption" maxlength="200" placeholder="π.χ. Η γέφυρα της Αλαμάνας από τα νότια"></label>';
+		echo '<label class="sd-inline"><input type="checkbox" name="photo_ok" value="1" required> Έχουμε δικαίωμα να τη δημοσιεύσουμε και δεν δείχνει πρόσωπα μαθητών.</label>';
+		echo '<p><button class="sd-button" type="submit">Ανέβασμα</button></p></form></section>';
+		$any = false;
+		foreach ( $places as $p ) {
+			$list = $all[ $p['id'] ] ?? array();
+			if ( ! $list ) {
+				continue;
+			}
+			$any = true;
+			echo '<section class="sd-card" id="t-' . esc_attr( $p['id'] ) . '"><h3>' . esc_html( $p['name'] ) . '</h3><div class="sd-photo-grid">';
+			foreach ( $list as $i => $ph ) {
+				$src = wp_get_attachment_image_url( (int) $ph['att'], 'medium' );
+				echo '<figure>' . ( $src ? '<img src="' . esc_url( $src ) . '" alt="' . esc_attr( $ph['caption'] ? $ph['caption'] : $p['name'] ) . '" loading="lazy">' : '' ) . '<figcaption>' . esc_html( $ph['caption'] ) . ' <span class="sd-meta">' . esc_html( $ph['credit'] ) . '</span></figcaption>';
+				SD_Frontend::form_open( 'official_photo_delete' );
+				echo '<input type="hidden" name="place_key" value="' . esc_attr( $p['id'] ) . '"><input type="hidden" name="idx" value="' . (int) $i . '"><button class="sd-button sd-small sd-quiet" type="submit" onclick="return confirm(\'Οριστική διαγραφή της φωτογραφίας; Δεν αναιρείται.\');">Διαγραφή</button></form></figure>';
+			}
+			echo '</div></section>';
+		}
+		if ( ! $any ) {
+			echo '<p class="sd-notice">Δεν έχει ανέβει ακόμη φωτογραφία σε ελεγμένο τόπο.</p>';
+		}
+	}
+
 	/** Φωτογραφία σημείου: μόνο εικόνα, έως 4 MB, με δήλωση ότι είναι δική μας. */
 	private static function upload_photo( $place_id ) {
 		global $wpdb;
@@ -404,10 +568,17 @@ class SD_Map {
 			self::render_deliverables();
 			return;
 		}
+		if ( isset( $_GET['fotografies'] ) ) {
+			self::render_photos();
+			return;
+		}
 
 		echo '<h2>Χάρτης Τοπικής Ιστορίας και Γεωγραφίας</h2>';
 		echo '<p class="sd-help">Ελεγμένα δελτία τόπων (έλεγχος ' . esc_html( mysql2date( 'd/m/Y', self::official()['checked'] ?? '' ) ) . ') και τα σημεία που προσθέτουν οι τάξεις. Στην τάξη: «Προβολή» για μεγάλα γράμματα στον προβολέα, «Διαδρομές» για ξενάγηση βήμα-βήμα.</p>';
 		self::map_box( false, 'sd-map-app' );
+		if ( current_user_can( SD_Roles::CAP_MANAGE ) ) {
+			echo '<p><a class="sd-button sd-small sd-quiet" href="' . esc_url( SD_Frontend::url( 'xartis', array( 'fotografies' => 1 ) ) ) . '">Φωτογραφίες των ελεγμένων τόπων</a></p>';
+		}
 
 		if ( ! $year ) {
 			return;
@@ -648,6 +819,8 @@ class SD_Map {
 		$extra = array(
 			'route'   => isset( $_GET['diadromi'] ) ? sanitize_key( wp_unslash( $_GET['diadromi'] ) ) : '',
 			'grade'   => isset( $_GET['taxi'] ) ? absint( $_GET['taxi'] ) : 0,
+			'period'  => isset( $_GET['periodos'] ) ? sanitize_key( wp_unslash( $_GET['periodos'] ) ) : '',
+			'valleyOn' => ! empty( $_GET['koilada'] ),
 			'embed'   => $embed,
 			'fullUrl' => add_query_arg( 'sd_xartis', '1', home_url( '/' ) ),
 		);

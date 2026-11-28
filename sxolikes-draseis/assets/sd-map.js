@@ -99,6 +99,102 @@
 		return L.divIcon({ className: 'sd-pin-wrap', html: html, iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -14] });
 	}
 
+	function sourcesLine(list) {
+		var src = el('p', { class: 'sd-pop-src' }, ['Πηγές: ']);
+		list.forEach(function (s, i) {
+			if (i) { src.appendChild(document.createTextNode(' · ')); }
+			if (isUrl(s)) {
+				var host = s.replace(/^https?:\/\/(www\.)?/i, '').split('/')[0];
+				src.appendChild(el('a', { href: s, target: '_blank', rel: 'noopener', text: host }));
+			} else {
+				src.appendChild(document.createTextNode(s));
+			}
+		});
+		return src;
+	}
+
+	/* Όλες οι φωτογραφίες ενός τόπου: ελεγμένοι τόποι (photos) ή σημείο τάξης (photo). */
+	function photosOf(p) {
+		if (p.photos && p.photos.length) { return p.photos; }
+		return p.photo ? [{ src: p.photo, credit: p.credit || '', caption: '' }] : [];
+	}
+
+	function gallery(p) {
+		var list = photosOf(p);
+		if (!list.length) { return null; }
+		var box = el('div', { class: 'sd-gal' });
+		var big = el('img', { src: list[0].src, alt: list[0].caption || p.name, loading: 'lazy' });
+		var cap = el('p', { class: 'sd-pop-credit' });
+		function show(i) {
+			big.src = list[i].src;
+			big.alt = list[i].caption || p.name;
+			cap.textContent = (list[i].caption ? list[i].caption + ' · ' : '') + (list[i].credit ? 'Φωτογραφία: ' + list[i].credit : '');
+		}
+		box.appendChild(big);
+		box.appendChild(cap);
+		if (list.length > 1) {
+			var th = el('div', { class: 'sd-gal-thumbs' });
+			list.forEach(function (ph, i) {
+				th.appendChild(el('button', { type: 'button', 'aria-label': 'Φωτογραφία ' + (i + 1), onclick: function () { show(i); } }, [el('img', { src: ph.src, alt: '', loading: 'lazy' })]));
+			});
+			box.appendChild(th);
+		}
+		show(0);
+		return box;
+	}
+
+	/* «Λήψη PDF»: καθαρή σελίδα εκτύπωσης· ο browser την αποθηκεύει ως PDF. */
+	function printDoc(title, node, data) {
+		// Κρυφό πλαίσιο στην ίδια σελίδα: χωρίς αναδυόμενο παράθυρο που μπλοκάρουν οι browsers.
+		var old = document.getElementById('sd-print-frame');
+		if (old) { old.parentNode.removeChild(old); }
+		var fr = el('iframe', { id: 'sd-print-frame', title: 'Εκτύπωση', 'aria-hidden': 'true', style: 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden' });
+		document.body.appendChild(fr);
+		var w = fr.contentWindow;
+		var css = 'body{font-family:system-ui,"Segoe UI",Arial,sans-serif;color:#17302f;max-width:720px;margin:24px auto;padding:0 16px;line-height:1.55;font-size:15px}' +
+			'h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:20px 0 6px}h3{font-size:15px;margin:14px 0 4px}.sd-print-meta{color:#555;font-size:13px;margin:0 0 14px}' +
+			'table{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0}td,th{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eef4f3}' +
+			'img{max-width:100%;height:auto;border-radius:6px}.sd-pop-src,.sd-pop-credit{font-size:12px;color:#555}a{color:#1d4f52}button,.sd-noprint{display:none}' +
+			'.sd-print-hint{background:#fbf0d6;padding:8px 12px;border-radius:8px;font-size:13px}@media print{.sd-print-hint{display:none}}';
+		w.document.open();
+		w.document.write('<!doctype html><html lang="el"><head><meta charset="utf-8"><title></title><style>' + css + '</style></head><body></body></html>');
+		w.document.close();
+		w.document.title = title;
+		var body = w.document.body;
+		body.appendChild(w.document.importNode(el('h1', { text: title }), true));
+		body.appendChild(w.document.importNode(el('p', { class: 'sd-print-meta', text: 'Χάρτης Τοπικής Ιστορίας και Γεωγραφίας' + (data.schoolName ? ' · ' + data.schoolName : '') + (data.checked ? ' · έλεγχος ' + data.checked.split('-').reverse().join('/') : '') }), true));
+		body.appendChild(w.document.importNode(node, true));
+		setTimeout(function () { w.focus(); w.print(); }, 300);
+	}
+
+	/* Το αναλυτικό δελτίο ενός τόπου (για το πλαίσιο και για το PDF). */
+	function detail(p, data) {
+		var box = el('div', { class: 'sd-det-body' });
+		var cat = data.cats[p.cat] ? data.cats[p.cat].label : '';
+		box.appendChild(el('p', { class: 'sd-pop-meta' }, [badge(p.cat), cat + (p.period ? ' · ' + p.period : '')]));
+		var g = gallery(p);
+		if (g) { box.appendChild(g); }
+		if (p.summary) { box.appendChild(el('p', { class: 'sd-det-lead', text: p.summary })); }
+		(p.details || []).forEach(function (t) { box.appendChild(el('p', { text: t })); });
+		if (p.activity) { box.appendChild(el('p', { class: 'sd-pop-act' }, [el('strong', { text: 'Στην τάξη: ' }), p.activity])); }
+		var facts = [];
+		if (p.certainty && CERT[p.certainty]) { facts.push('Βεβαιότητα: ' + CERT[p.certainty]); }
+		if (p.periods && p.periods.length && data.periods) { facts.push('Περίοδοι: ' + p.periods.map(function (k) { return data.periods[k] ? data.periods[k].label : k; }).join(', ')); }
+		if (p.grades && p.grades.length) { facts.push('Τάξεις: ' + p.grades.map(function (g) { return GRADES[g]; }).join(', ')); }
+		if (p.visit && VISIT[p.visit]) { facts.push(VISIT[p.visit]); }
+		if (data.school) { facts.push('≈ ' + fmtKm(km(data.school, p)) + ' χλμ. από το σχολείο (σε ευθεία)'); }
+		if (p.approx) { facts.push('Η θέση είναι ενδεικτική.'); }
+		if (p.byClass) { facts.push('Πρόσθεσε: τμήμα ' + p.byClass + (p.year ? ', ' + p.year : '')); }
+		if (p.status && p.status !== 'dimosieftike') { facts.push('Δεν έχει δημοσιευτεί ακόμη.'); }
+		if (facts.length) {
+			var ul = el('ul', { class: 'sd-pop-facts' });
+			facts.forEach(function (f) { ul.appendChild(el('li', { text: f })); });
+			box.appendChild(ul);
+		}
+		if (p.sources && p.sources.length) { box.appendChild(sourcesLine(p.sources)); }
+		return box;
+	}
+
 	function popup(p, data) {
 		var box = el('div', { class: 'sd-pop' });
 		box.appendChild(el('h3', { text: p.name }));
@@ -107,11 +203,15 @@
 			badge(p.cat),
 			cat + (p.period ? ' · ' + p.period : '')
 		]));
-		if (p.photo) {
-			box.appendChild(el('img', { src: p.photo, alt: p.name, loading: 'lazy' }));
-			if (p.credit) { box.appendChild(el('p', { class: 'sd-pop-credit', text: 'Φωτογραφία: ' + p.credit })); }
+		var ph = photosOf(p);
+		if (ph.length) {
+			box.appendChild(el('img', { src: ph[0].src, alt: ph[0].caption || p.name, loading: 'lazy' }));
+			if (ph[0].credit) { box.appendChild(el('p', { class: 'sd-pop-credit', text: 'Φωτογραφία: ' + ph[0].credit + (ph.length > 1 ? ' · ' + ph.length + ' φωτογραφίες' : '') })); }
 		}
 		if (p.summary) { box.appendChild(el('p', { text: p.summary })); }
+		if (data.app) {
+			box.appendChild(el('p', { class: 'sd-pop-more' }, [el('button', { type: 'button', class: 'sd-btn sd-btn-main', text: 'Αναλυτικά και PDF →', onclick: function () { data.app.showPlace(p.id); } })]));
+		}
 		if (p.activity) { box.appendChild(el('p', { class: 'sd-pop-act' }, [el('strong', { text: 'Στην τάξη: ' }), p.activity])); }
 		var facts = [];
 		if (p.certainty && CERT[p.certainty]) { facts.push('Βεβαιότητα: ' + CERT[p.certainty]); }
@@ -126,19 +226,7 @@
 			facts.forEach(function (f) { ul.appendChild(el('li', { text: f })); });
 			box.appendChild(ul);
 		}
-		if (p.sources && p.sources.length) {
-			var src = el('p', { class: 'sd-pop-src' }, ['Πηγές: ']);
-			p.sources.forEach(function (s, i) {
-				if (i) { src.appendChild(document.createTextNode(' · ')); }
-				if (isUrl(s)) {
-					var host = s.replace(/^https?:\/\/(www\.)?/i, '').split('/')[0];
-					src.appendChild(el('a', { href: s, target: '_blank', rel: 'noopener', text: host }));
-				} else {
-					src.appendChild(document.createTextNode(s));
-				}
-			});
-			box.appendChild(src);
-		}
+		if (p.sources && p.sources.length) { box.appendChild(sourcesLine(p.sources)); }
 		return box;
 	}
 
@@ -146,7 +234,8 @@
 		this.root = root;
 		this.data = data;
 		this.markers = {};
-		this.filter = { q: '', cat: '', grade: data.grade || 0 };
+		this.filter = { q: '', cat: '', grade: data.grade || 0, period: data.period || '' };
+		data.app = this;
 		this.route = null;
 		this.step = -1;
 		this.build();
@@ -173,6 +262,15 @@
 		gradeSel.value = String(this.filter.grade || 0);
 		tools.appendChild(gradeSel);
 
+		var perSel = el('select', { 'aria-label': 'Περίοδος', onchange: function () { self.setPeriod(this.value); } });
+		perSel.appendChild(el('option', { value: '', text: 'Όλες οι περίοδοι' }));
+		Object.keys(data.periods || {}).forEach(function (k) {
+			var pr = data.periods[k];
+			perSel.appendChild(el('option', { value: k, text: pr.label + ' (' + pr.years + ')' + ((data.units || {})[k] ? ' · με κείμενο' : '') }));
+		});
+		this.perSel = perSel;
+		tools.appendChild(perSel);
+
 		var routeSel = el('select', { 'aria-label': 'Διαδρομή', onchange: function () { self.startRoute(this.value); } });
 		routeSel.appendChild(el('option', { value: '', text: 'Διαδρομές…' }));
 		data.routes.forEach(function (r) { routeSel.appendChild(el('option', { value: r.id, text: r.name })); });
@@ -193,6 +291,12 @@
 
 		this.count = el('p', { class: 'sd-map-count' });
 		side.appendChild(this.count);
+		this.placeBox = el('section', { class: 'sd-det', hidden: 'hidden', 'aria-live': 'polite' });
+		side.appendChild(this.placeBox);
+		this.valleyBox = el('section', { class: 'sd-det sd-valley', hidden: 'hidden' });
+		side.appendChild(this.valleyBox);
+		this.unitBox = el('section', { class: 'sd-det sd-unit', hidden: 'hidden' });
+		side.appendChild(this.unitBox);
 		this.routeBox = el('div', { class: 'sd-route', hidden: 'hidden' });
 		side.appendChild(this.routeBox);
 		this.list = el('ul', { class: 'sd-map-list' });
@@ -204,6 +308,8 @@
 		this.map = map;
 		var base = L.tileLayer(data.tiles || TILE, { maxZoom: 18, attribution: data.tilesAttr || ATTR, subdomains: data.tilesSub || 'abc' }).addTo(map);
 		var topo = L.tileLayer(TOPO.url, { maxZoom: TOPO.maxZoom, attribution: TOPO.attr, subdomains: TOPO.subdomains });
+		this.base = base;
+		this.topo = topo;
 		var layers = { 'Χάρτης': base };
 		layers[TOPO.name] = topo;
 		var overlays = {};
@@ -221,8 +327,11 @@
 		}
 		if ((data.coasts || []).length) {
 			var cl = L.layerGroup();
+			this.coastLines = {};
+			this.coastLayer = cl;
 			data.coasts.forEach(function (b) {
 				var line = L.polyline(b.coords, { color: b.color, weight: 4, opacity: 0.9, dashArray: b.dash });
+				self.coastLines[b.id] = line;
 				line.bindTooltip(b.name, { sticky: true });
 				line.bindPopup(function () { return borderPopup(b, data); }, { maxWidth: 360, autoPanPaddingTopLeft: [10, 60] });
 				cl.addLayer(line);
@@ -245,7 +354,7 @@
 			overlays['Όρια νομών (σήμερα)'] = nl;
 			if (location.hash === '#nomoi') { nl.addTo(map); map.setView([38.9, 22.6], 8); }
 		}
-		L.control.layers(layers, overlays, { position: 'topright', collapsed: false }).addTo(map);
+		L.control.layers(layers, overlays, { position: 'topright', collapsed: window.innerWidth < 800 }).addTo(map);
 		L.control.scale({ imperial: false }).addTo(map);
 		this.routeLayer = L.layerGroup().addTo(map);
 		this.measureLayer = L.layerGroup().addTo(map);
@@ -262,7 +371,7 @@
 		data.places.forEach(function (p) {
 			var m = L.marker([p.lat, p.lng], { icon: icon(p), title: p.name, alt: p.name });
 			m.bindPopup(function () { return popup(p, data); }, { maxWidth: 340, autoPanPaddingTopLeft: [10, 60] });
-			m.on('click', function () { self.highlight(p.id); });
+			m.on('click', function () { self.highlight(p.id); self.showPlace(p.id, true); });
 			self.markers[p.id] = { m: m, p: p };
 		});
 
@@ -273,6 +382,9 @@
 			box.appendChild(el('button', { type: 'button', title: 'Προβολή στην τάξη (μεγάλα γράμματα)', text: 'Προβολή', onclick: function () { self.shell.classList.toggle('is-big'); setTimeout(function () { map.invalidateSize(); }, 200); } }));
 			box.appendChild(el('button', { type: 'button', title: 'Πλήρης οθόνη', text: '⛶', onclick: function () { self.fullscreen(); } }));
 			box.appendChild(el('button', { type: 'button', title: 'Μέτρηση απόστασης: κλικ σε δύο σημεία', text: 'Μέτρηση', onclick: function () { self.measure(); } }));
+			if (data.valley) {
+				box.appendChild(el('button', { type: 'button', class: 'sd-ctl-valley', title: 'Η κοιλάδα του Σπερχειού: πώς ήταν και πού έφτασε η θάλασσα', text: 'Σπερχειός', onclick: function () { self.toggleValley(); } }));
+			}
 			if (data.standalone) {
 				box.appendChild(el('button', { type: 'button', title: 'Ορίστε πού είναι το σχολείο σας: κλικ στον χάρτη', text: 'Σχολείο', onclick: function () { self.pickSchool(); } }));
 			}
@@ -296,12 +408,14 @@
 			} else {
 				self.fitVisible();
 			}
+			if (data.period) { self.perSel.value = data.period; self.setPeriod(data.period); }
+			if (data.valleyOn || location.hash === '#koilada') { self.toggleValley(true); return; }
 			if (location.hash.length > 1) { self.open(decodeURIComponent(location.hash.slice(1))); }
 		});
 		// Δεύτερη προσαρμογή όταν η σελίδα έχει πάρει το τελικό ύψος (π.χ. μέσα σε iframe).
 		setTimeout(function () {
 			map.invalidateSize();
-			if (location.hash.length > 1) { return; }
+			if (location.hash.length > 1 || self.valleyOn) { return; }
 			if (self.route) { self.fitRoute(); } else { self.fitVisible(); }
 		}, 400);
 	};
@@ -371,7 +485,9 @@
 
 	MapApp.prototype.visible = function (p) {
 		var f = this.filter;
+		if (this.valleyOn) { return (this.data.valley.anchors || []).indexOf(p.id) >= 0; }
 		if (f.cat && p.cat !== f.cat) { return false; }
+		if (f.period && (!p.periods || p.periods.indexOf(f.period) < 0)) { return false; }
 		if (f.grade && p.grades && p.grades.length && p.grades.indexOf(f.grade) < 0) { return false; }
 		if (f.q) {
 			var hay = (p.name + ' ' + (p.period || '') + ' ' + (p.summary || '')).toLocaleLowerCase('el').normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -424,7 +540,155 @@
 		var m = it.m;
 		setTimeout(function () { m.openPopup(); }, 650);
 		this.highlight(id);
+		this.showPlace(id, true);
 		if (window.innerWidth < 800) { this.map.getContainer().scrollIntoView({ behavior: 'smooth' }); }
+	};
+
+	/* Πλαίσιο με το αναλυτικό δελτίο του τόπου. quiet: χωρίς κύλιση (κλικ στον χάρτη). */
+	MapApp.prototype.showPlace = function (id, quiet) {
+		var self = this, it = this.markers[id];
+		if (!it) { return; }
+		var p = it.p, box = this.placeBox;
+		box.textContent = '';
+		box.hidden = false;
+		var head = el('div', { class: 'sd-det-head' }, [
+			el('h3', { text: p.name }),
+			el('button', { type: 'button', class: 'sd-det-close', 'aria-label': 'Κλείσιμο', text: '×', onclick: function () { box.hidden = true; self.highlight(''); } })
+		]);
+		box.appendChild(head);
+		var body = detail(p, this.data);
+		box.appendChild(body);
+		box.appendChild(el('p', { class: 'sd-det-tools' }, [
+			el('button', { type: 'button', class: 'sd-btn sd-btn-main', title: 'Ανοίγει την εκτύπωση: διαλέξτε «Αποθήκευση ως PDF»', text: 'Λήψη PDF', onclick: function () { printDoc(p.name, detail(p, self.data), self.data); } })
+		]));
+		if (!quiet && window.innerWidth < 800) { box.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+		if (!quiet) { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+	};
+
+	/* Περίοδος: φιλτράρει τους τόπους και, όπου υπάρχει κείμενο, δείχνει την ενότητα. */
+	MapApp.prototype.setPeriod = function (k) {
+		if (this.valleyOn) { this.toggleValley(false); }
+		this.filter.period = k;
+		this.showUnit(k);
+		this.refresh(true);
+	};
+
+	MapApp.prototype.unitNode = function (u, full) {
+		var self = this, data = this.data, box = el('div', { class: 'sd-unit-body' });
+		box.appendChild(el('p', { class: 'sd-det-lead', text: u.lead }));
+		if ((u.chronology || []).length) {
+			box.appendChild(el('h4', { text: 'Χρονολόγιο' }));
+			var ol = el('ol', { class: 'sd-chrono' });
+			u.chronology.forEach(function (r) {
+				var what = r[2] && self.markers[r[2]]
+					? el('button', { type: 'button', class: 'sd-linkbtn', text: r[1], onclick: function () { self.open(r[2]); } })
+					: el('span', { text: r[1] });
+				ol.appendChild(el('li', null, [
+					el('span', { class: 'sd-chrono-when', text: r[0] }),
+					what,
+					r[2] && self.markers[r[2]] ? el('span', { class: 'sd-chrono-where', text: self.markers[r[2]].p.name }) : null,
+					CERT[r[3]] ? el('span', { class: 'sd-chrono-cert is-' + r[3], text: CERT[r[3]] }) : null
+				]));
+			});
+			box.appendChild(ol);
+		}
+		var secs = el('div');
+		(u.sections || []).forEach(function (sc) {
+			secs.appendChild(el('h4', { text: sc.h }));
+			sc.p.forEach(function (x) { secs.appendChild(el('p', { text: x })); });
+		});
+		if (full) {
+			box.appendChild(secs);
+			// Στο PDF: και τα αναλυτικά δελτία των τόπων της ενότητας.
+			var ids = [];
+			(u.chronology || []).forEach(function (r) { if (r[2] && ids.indexOf(r[2]) < 0 && self.markers[r[2]]) { ids.push(r[2]); } });
+			if (ids.length) {
+				box.appendChild(el('h2', { text: 'Οι τόποι αναλυτικά' }));
+				ids.forEach(function (id) {
+					box.appendChild(el('h3', { text: self.markers[id].p.name }));
+					box.appendChild(detail(self.markers[id].p, data));
+				});
+			}
+		} else {
+			box.appendChild(el('details', { class: 'sd-unit-more' }, [el('summary', { text: 'Όλο το κείμενο της ενότητας' }), secs]));
+		}
+		if ((u.sources || []).length) { box.appendChild(sourcesLine(u.sources)); }
+		return box;
+	};
+
+	MapApp.prototype.showUnit = function (k) {
+		var self = this, u = (this.data.units || {})[k], box = this.unitBox;
+		box.textContent = '';
+		if (!u) { box.hidden = true; return; }
+		box.hidden = false;
+		box.appendChild(el('div', { class: 'sd-det-head' }, [
+			el('h3', { text: u.title }),
+			el('button', { type: 'button', class: 'sd-det-close', 'aria-label': 'Κλείσιμο', text: '×', onclick: function () { box.hidden = true; } })
+		]));
+		box.appendChild(this.unitNode(u, false));
+		box.appendChild(el('p', { class: 'sd-det-tools' }, [
+			el('button', { type: 'button', class: 'sd-btn sd-btn-main', title: 'Ανοίγει την εκτύπωση: διαλέξτε «Αποθήκευση ως PDF»', text: 'Λήψη PDF της ενότητας', onclick: function () { printDoc(u.title, self.unitNode(u, true), self.data); } })
+		]));
+	};
+
+	/* Η κοιλάδα του Σπερχειού: ανάγλυφο, λίγα σημεία, οι ακτές ανά εποχή. */
+	MapApp.prototype.toggleValley = function (on) {
+		var self = this, v = this.data.valley, map = this.map;
+		if (!v) { return; }
+		on = on === undefined ? !this.valleyOn : on;
+		this.valleyOn = on;
+		this.shell.classList.toggle('is-valley', on);
+		var box = this.valleyBox;
+		box.textContent = '';
+		if (!on) {
+			box.hidden = true;
+			if (this.valleyTopo) { map.removeLayer(this.topo); this.base.addTo(map); this.valleyTopo = false; }
+			if (this.coastLayer && this.valleyCoast) { map.removeLayer(this.coastLayer); this.valleyCoast = false; }
+			Object.keys(this.coastLines || {}).forEach(function (k) { self.coastLines[k].setStyle({ opacity: 0.9, weight: 4 }); });
+			this.refresh(true);
+			return;
+		}
+		if (this.route) { this.routeSel.value = ''; this.startRoute(''); }
+		this.unitBox.hidden = true;
+		this.placeBox.hidden = true;
+		if (map.hasLayer(this.base)) { map.removeLayer(this.base); this.topo.addTo(map); this.valleyTopo = true; }
+		if (this.coastLayer && !map.hasLayer(this.coastLayer)) { this.coastLayer.addTo(map); this.valleyCoast = true; }
+		this.refresh(false);
+		map.fitBounds([[38.77, 22.36], [38.95, 22.72]]);
+		box.hidden = false;
+		box.appendChild(el('div', { class: 'sd-det-head' }, [
+			el('h3', { text: v.title }),
+			el('button', { type: 'button', class: 'sd-det-close', 'aria-label': 'Έξοδος από την κοιλάδα', text: '×', onclick: function () { self.toggleValley(false); } })
+		]));
+		box.appendChild(el('p', { class: 'sd-det-lead', text: v.lead }));
+		var steps = el('div', { class: 'sd-valley-steps', role: 'group', 'aria-label': 'Εποχές' });
+		var txt = el('p', { class: 'sd-valley-text', 'aria-live': 'polite' });
+		function pick(i) {
+			var st = v.steps[i];
+			Array.prototype.forEach.call(steps.children, function (b, j) { b.classList.toggle('is-on', j === i); });
+			txt.textContent = st.text;
+			Object.keys(self.coastLines || {}).forEach(function (k) {
+				var hit = !st.id || k === st.id;
+				self.coastLines[k].setStyle({ opacity: hit ? 0.95 : 0.25, weight: k === st.id ? 6 : 4 });
+				if (k === st.id) { self.coastLines[k].bringToFront(); }
+			});
+		}
+		v.steps.forEach(function (st, i) {
+			steps.appendChild(el('button', { type: 'button', class: 'sd-chip', text: st.label, onclick: function () { pick(i); } }));
+		});
+		box.appendChild(steps);
+		box.appendChild(txt);
+		box.appendChild(el('p', { class: 'sd-map-note', text: 'Οι παλιές ακτές είναι σχηματικές. Στον χάρτη μένουν μόνο λίγα σημεία προσανατολισμού· το «×» επαναφέρει όλους τους τόπους.' }));
+		var vnode = function () {
+			var n = el('div');
+			n.appendChild(el('p', { text: v.lead }));
+			v.steps.forEach(function (st) { n.appendChild(el('h3', { text: st.label })); n.appendChild(el('p', { text: st.text })); });
+			n.appendChild(sourcesLine(v.sources || []));
+			return n;
+		};
+		box.appendChild(el('p', { class: 'sd-det-tools' }, [el('button', { type: 'button', class: 'sd-btn sd-btn-main', title: 'Ανοίγει την εκτύπωση: διαλέξτε «Αποθήκευση ως PDF»', text: 'Λήψη PDF', onclick: function () { printDoc(v.title, vnode(), self.data); } })]));
+		if ((v.sources || []).length) { box.appendChild(sourcesLine(v.sources)); }
+		pick(0);
 	};
 
 	MapApp.prototype.startRoute = function (id) {

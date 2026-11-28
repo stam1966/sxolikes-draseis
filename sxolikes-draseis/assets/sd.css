@@ -1019,3 +1019,9 @@ details.sd-inline-edit > summary { font-size: .88rem; }
 /* Καμία λίστα επιλογών πιο φαρδιά από την οθόνη. */
 .sd-app select { max-width: 100%; }
 .sd-app label { min-width: 0; }
+/* Φωτογραφίες ελεγμένων τόπων */
+.sd-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .8rem; }
+.sd-photo-grid figure { margin: 0; }
+.sd-photo-grid img { width: 100%; height: 130px; object-fit: cover; border-radius: 10px; display: block; }
+.sd-photo-grid figcaption { font-size: .85rem; margin: .3rem 0; }
+.sd-photo-grid form { margin: 0; }
