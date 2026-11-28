@@ -65,8 +65,8 @@ html = f"""<!doctype html>
 <style>{read('assets/sd-map.css')}</style>
 <style>
 .sd-map-foot {{ font: .78rem/1.4 system-ui, sans-serif; color: #5f6b76; padding: .35rem 16px; background: #fff; border-top: 1px solid #d9dee3; }}
-body.sd-map-public .sd-map-shell {{ height: calc(100vh - 44px - 30px); }}
-@media (max-width: 800px) {{ body.sd-map-public .sd-map-shell {{ height: auto; }} }}
+body.sd-map-public .sdm {{ height: calc(100vh - 44px - 30px); }}
+@media (max-width: 820px) {{ body.sd-map-public .sdm {{ height: auto; }} }}
 </style>
 </head>
 <body class="sd-map-public">
