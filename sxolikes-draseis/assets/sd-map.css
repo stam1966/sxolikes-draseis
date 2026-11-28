@@ -133,7 +133,12 @@
 .sdm-era-head { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; margin: 0 0 .3rem; padding: .6rem .8rem; background: var(--ochre); border-radius: 12px; }
 .sdm-era-head strong { font-size: 1.05rem; }
 .sdm-era-head span { font-size: .85rem; }
-.sdm[data-mode="eras"] .leaflet-bottom { bottom: 9.6rem; }
+/* Η κλίμακα και η αναφορά πηγών μένουν πάνω από την ταινία, όποιο ύψος κι αν έχει. */
+.sdm[data-mode="eras"] .leaflet-bottom { bottom: calc(var(--sdm-rib, 7.7rem) + 2.4rem); }
+.sdm-guide { margin: 1.2rem 0 .4rem; padding: .85rem 1rem; border: 1px solid var(--line); border-left: 4px solid var(--river); border-radius: 12px; background: var(--mist); display: flex; flex-direction: column; gap: .35rem; }
+.sdm-guide strong { font-size: .95rem; }
+.sdm-guide span { font-size: .85rem; color: var(--muted); }
+.sdm-guide .sdm-btn { align-self: flex-start; }
 
 .sdm-unit h4 { margin: 1.1rem 0 .4rem; font-size: .95rem; }
 .sdm-chrono { list-style: none; margin: .3rem 0 .6rem; padding: 0 0 0 1.05rem; border-left: 2px solid var(--river-soft); }

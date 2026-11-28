@@ -435,6 +435,7 @@
 		var pr = (data.periods || {})[k];
 		if (!pr) {
 			box.appendChild(el('p', { class: 'sdm-empty', text: 'Καμία εποχή δεν έχει επιλεγεί. Ο χάρτης δείχνει όλους τους τόπους.' }));
+			this.guideLink(box);
 			this.refresh(true);
 			return;
 		}
@@ -446,6 +447,7 @@
 			box.appendChild(el('p', { class: 'sdm-actions' }, [
 				el('button', { type: 'button', class: 'sdm-btn is-main', title: 'Ανοίγει την εκτύπωση: διαλέξτε «Αποθήκευση ως PDF»', text: 'Λήψη PDF της ενότητας', onclick: function () { printDoc(u.title, self.unitNode(u, true), data); } })
 			]));
+			this.guideLink(box);
 		} else {
 			box.appendChild(el('p', { class: 'sdm-sub', text: 'Για αυτή την εποχή δεν έχει γραφτεί ακόμη ενιαίο κείμενο. Πατήστε τους τόπους της για να διαβάσετε το δελτίο τους.' }));
 			var ul = el('ul', { class: 'sdm-list is-compact' });
@@ -456,6 +458,16 @@
 			box.appendChild(ul);
 		}
 		this.refresh(true);
+	};
+
+	/* Ο πλήρης οδηγός μελέτης (όλες οι εποχές και η γεωγραφία) σε ένα PDF. */
+	MapApp.prototype.guideLink = function (box) {
+		if (!this.data.guideUrl) { return; }
+		box.appendChild(el('div', { class: 'sdm-guide' }, [
+			el('strong', { text: 'Οδηγός μελέτης για τον εκπαιδευτικό' }),
+			el('span', { text: 'Όλες οι εποχές και η γεωγραφία του τόπου σε ένα αρχείο: πλαίσιο, χρονολόγιο, τόποι, τι είναι βέβαιο, ιδέες για την τάξη, πηγές.' }),
+			el('a', { class: 'sdm-btn', href: this.data.guideUrl, target: '_blank', rel: 'noopener', download: '', text: 'Λήψη οδηγού (PDF)' })
+		]));
 	};
 
 	MapApp.prototype.unitNode = function (u, full) {
@@ -564,6 +576,19 @@
 		this.map.fitBounds(L.latLngBounds(this.route.stops.map(function (s) { return s.m.getLatLng(); })).pad(0.25), { maxZoom: 12 });
 	};
 
+	/* Μετρά το ύψος της ταινίας, ώστε κλίμακα και αναφορά πηγών να μένουν από πάνω της. */
+	MapApp.prototype.fitRibbon = function () {
+		var self = this;
+		if (!this.ribbonWired) {
+			this.ribbonWired = true;
+			window.addEventListener('resize', function () { self.fitRibbon(); });
+			if (window.ResizeObserver) { new window.ResizeObserver(function () { self.fitRibbon(); }).observe(this.ribbon); }
+		}
+		if (this.ribbon.hidden) { return; }
+		var h = this.ribbon.offsetHeight;
+		if (h) { this.shell.style.setProperty('--sdm-rib', h + 'px'); }
+	};
+
 	/* ---------- Τρόποι ---------- */
 	MapApp.prototype.setMode = function (m, quiet) {
 		var self = this, prev = this.mode;
@@ -573,6 +598,7 @@
 		Object.keys(this.panes).forEach(function (k) { self.panes[k].hidden = k !== m; });
 		this.shell.setAttribute('data-mode', m);
 		this.ribbon.hidden = m !== 'eras';
+		this.fitRibbon();
 		if (prev === 'valley' && m !== 'valley') { this.toggleValley(false); }
 		if (prev === 'routes' && m !== 'routes' && this.route) { this.startRoute(''); }
 		if (prev === 'eras' && m !== 'eras' && this.filter.period) { this.filter.period = ''; this.setPeriod(''); }

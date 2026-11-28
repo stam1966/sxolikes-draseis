@@ -175,6 +175,7 @@ class SD_Map {
 			'checked' => isset( $o['checked'] ) ? $o['checked'] : '',
 			'public'  => (bool) $public,
 			'schoolName' => SD_Frontend::school_name(),
+			'guideUrl'   => file_exists( SD_DIR . 'assets/docs/odigos-ekpaideftikou.pdf' ) ? SD_URL . 'assets/docs/odigos-ekpaideftikou.pdf?ver=' . SD_VERSION : '',
 		);
 	}
 
